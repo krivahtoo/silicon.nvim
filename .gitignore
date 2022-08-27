@@ -1,0 +1,3 @@
+/target
+/Cargo.lock
+lua/silicon.so
