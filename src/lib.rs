@@ -94,7 +94,9 @@ struct Opts {
 
     output: Option<PathBuf>,
 
+    #[serde(alias = "line1")]
     start: usize,
+    #[serde(alias = "line2")]
     end: usize,
 }
 
@@ -113,7 +115,7 @@ impl ToObject for Opts {
 fn save_image(opts: Opts) -> Result<()> {
     let (ps, ts) = init_syntect();
     let code = api::get_current_buf()
-        .get_lines(opts.start, opts.end, false)?
+        .get_lines(opts.start-1, opts.end, false)?
         .fold(String::new(), |a, b| a + b.to_string().as_str() + "\n")
         .as_str()
         .to_owned();
@@ -189,7 +191,7 @@ fn silicon() -> Result<Dictionary> {
             None
         };
         save_image(Opts {
-            start: args.line1 - 1,
+            start: args.line1,
             end: args.line2,
             output,
             ..opts
