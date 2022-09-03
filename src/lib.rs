@@ -115,7 +115,7 @@ impl ToObject for Opts {
 fn save_image(opts: Opts) -> Result<()> {
     let (ps, ts) = init_syntect();
     let code = api::get_current_buf()
-        .get_lines(opts.start-1, opts.end, false)?
+        .get_lines(opts.start - 1, opts.end, false)?
         .fold(String::new(), |a, b| a + b.to_string().as_str() + "\n")
         .as_str()
         .to_owned();
@@ -145,38 +145,36 @@ fn save_image(opts: Opts) -> Result<()> {
     let image = formatter.format(&highlight, theme);
 
     if opts.output.is_some() {
-        if let Err(e) = image.save(opts.output.unwrap().as_path()) {
-            api::err_writeln(format!("[silicon.nvim]: Failed to save image: {e}").as_str())
+        match image.save(opts.output.unwrap().as_path()) {
+            Err(e) => {
+                api::err_writeln(format!("[silicon.nvim]: Failed to save image: {e}").as_str())
+            }
+            Ok(_) => {
+                api::notify(
+                    "Image saved to file",
+                    LogLevel::Info,
+                    Some(&NotifyOpts::default()),
+                )?;
+            }
         };
     } else {
-        if let Err(e) = dump_image_to_clipboard(&image) {
-            api::err_writeln(format!("[silicon.nvim]: {e}").as_str())
+        match dump_image_to_clipboard(&image) {
+            Err(e) => api::err_writeln(format!("[silicon.nvim]: {e}").as_str()),
+            Ok(_) => {
+                api::notify(
+                    "Image saved to clipboard",
+                    LogLevel::Info,
+                    Some(&NotifyOpts::default()),
+                )?;
+            }
         };
     }
 
     Ok(())
 }
 
-#[oxi::module]
-fn silicon() -> Result<Dictionary> {
-    // Remaps `SS` to `Silicon` in visual mode.
-    // api::set_keymap(Mode::Insert, "SS", "Silicon", Some(&SetKeymapOptsBuilder::default().desc("Save image of code").silent(true).build()))?;
-
+fn setup(cmd_opts: Opts) -> Result<()> {
     // Create a new `Silicon` command.
-    let cmd_opts: Opts = Opts {
-        font: None,
-        theme: None,
-        start: 0,
-        end: 1,
-        font_size: None,
-        line_number: None,
-        line_pad: None,
-        line_offset: None,
-        round_corner: None,
-        window_controls: None,
-        output: None,
-    };
-
     let opts = CreateCommandOpts::builder()
         .range(CommandRange::CurrentLine)
         .desc("create a beautiful image of your source code.")
@@ -185,11 +183,10 @@ fn silicon() -> Result<Dictionary> {
 
     let silicon_cmd = move |args: CommandArgs| -> Result<()> {
         let opts = cmd_opts.clone();
-        let output = if args.args.is_some() {
-            Some(PathBuf::from(args.args.unwrap()))
-        } else {
-            None
-        };
+        let output = args
+            .args
+            .is_some()
+            .then(|| PathBuf::from(args.args.unwrap()));
         save_image(Opts {
             start: args.line1,
             end: args.line2,
@@ -197,10 +194,16 @@ fn silicon() -> Result<Dictionary> {
             ..opts
         })
     };
-    api::create_user_command("Silicon", silicon_cmd, Some(&opts))?;
+    api::create_user_command("Silicon", silicon_cmd, Some(&opts))
+}
 
-    Ok(Dictionary::from_iter([(
-        "capture",
-        Function::from_fn(save_image),
-    )]))
+#[oxi::module]
+fn silicon() -> Result<Dictionary> {
+    // Remaps `SS` to `Silicon` in visual mode.
+    // api::set_keymap(Mode::Insert, "SS", "Silicon", Some(&SetKeymapOptsBuilder::default().desc("Save image of code").silent(true).build()))?;
+
+    Ok(Dictionary::from_iter([
+        ("capture", Function::from_fn(save_image)),
+        ("setup", Function::from_fn(setup)),
+    ]))
 }

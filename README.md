@@ -24,24 +24,27 @@ Plug 'krivahtoo/silicon.nvim', { 'do': './install.sh' }
 ## Usage
 
 ```lua
-local silicon = require 'silicon'
-vim.api.nvim_create_user_command('Silicon', function(opts)
-  silicon.capture({
-    line1 = opts.line1,
-    line2 = opts.line2,
-    font = 'FantasqueSansMono Nerd Font',
-    theme = 'Monokai Extended',
-    output = opts.args ~= "" and opts.args or nil
-  })
-end, { range = true, nargs = '?' })
+require('silicon').setup({
+  line1 = 0, -- required
+  line2 = 0, -- required
+  font = 'FantasqueSansMono Nerd Font',
+  theme = 'Monokai Extended',
+})
 ```
+
+Command:
+
+```bash
+Silicon [file]
+```
+
 
 The `capture` function accepts the following table:
 
 ```lua
 {
-  line1 = number,
-  line2 = number,
+  line1 = number, -- alias to 'start'
+  line2 = number, -- alias to 'end'
   -- The following keys are all optional
   -- with default values
   font = 'Hack',
