@@ -8,10 +8,10 @@ use nvim_oxi::{
     ToObject,
 };
 
-use image::DynamicImage;
+use image::{DynamicImage, Rgba};
 use serde::{Deserialize, Serialize};
 use silicon::formatter::ImageFormatterBuilder;
-use silicon::utils::{init_syntect, ShadowAdder};
+use silicon::utils::{init_syntect, Background, ShadowAdder, ToRgba};
 use syntect::easy::HighlightLines;
 use syntect::util::LinesWithEndings;
 
@@ -78,6 +78,17 @@ pub fn dump_image_to_clipboard(_image: &DynamicImage) -> anyhow::Result<(), Erro
     ))
 }
 
+#[derive(Clone, Serialize, Deserialize, Default)]
+struct ShadowOpts {
+    #[serde(default)]
+    blur_radius: f32,
+    #[serde(default)]
+    offset_x: i32,
+    #[serde(default)]
+    offset_y: i32,
+    color: Option<String>,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 struct Opts {
     font: Option<String>,
@@ -85,9 +96,19 @@ struct Opts {
 
     theme: Option<String>,
 
+    background: Option<String>,
+
+    #[serde(default)]
+    shadow: ShadowOpts,
+
+    pad_horiz: Option<u32>,
+    pad_vert: Option<u32>,
+
     line_number: Option<bool>,
     line_pad: Option<u32>,
     line_offset: Option<u32>,
+
+    tab_width: Option<u8>,
 
     round_corner: Option<bool>,
     window_controls: Option<bool>,
@@ -112,6 +133,11 @@ impl ToObject for Opts {
     }
 }
 
+fn parse_str_color(s: &str) -> anyhow::Result<Rgba<u8>, anyhow::Error> {
+    Ok(s.to_rgba()
+        .map_err(|_| format_err!("Invalid color: `{}`", s))?)
+}
+
 fn save_image(opts: Opts) -> Result<()> {
     let (ps, ts) = init_syntect();
     let code = api::get_current_buf()
@@ -129,17 +155,31 @@ fn save_image(opts: Opts) -> Result<()> {
         .map(|line| h.highlight(line, &ps))
         .collect::<Vec<_>>();
 
+    let adder = ShadowAdder::default()
+        .background(Background::Solid(
+            parse_str_color(opts.background.unwrap_or(String::from("#eff")).as_str()).unwrap(),
+        ))
+        .shadow_color(
+            parse_str_color(opts.shadow.color.unwrap_or(String::from("#555")).as_str()).unwrap(),
+        )
+        .blur_radius(opts.shadow.blur_radius)
+        .offset_x(opts.shadow.offset_x)
+        .offset_y(opts.shadow.offset_y)
+        .pad_horiz(opts.pad_horiz.unwrap_or(80))
+        .pad_vert(opts.pad_vert.unwrap_or(100));
+
     let mut formatter = ImageFormatterBuilder::new()
         .font(vec![(
             opts.font.unwrap_or(String::from("Hack")).as_str(),
             opts.font_size.unwrap_or(20.0),
         )])
+        .tab_width(opts.tab_width.unwrap_or(4))
         .line_pad(opts.line_pad.unwrap_or(2))
         .line_offset(opts.line_offset.unwrap_or(1))
         .line_number(opts.line_number.unwrap_or(false))
         .window_controls(opts.window_controls.unwrap_or(true))
         .round_corner(opts.round_corner.unwrap_or(true))
-        .shadow_adder(ShadowAdder::default())
+        .shadow_adder(adder)
         .build()
         .unwrap();
     let image = formatter.format(&highlight, theme);
@@ -182,7 +222,6 @@ fn setup(cmd_opts: Opts) -> Result<()> {
         .build();
 
     let silicon_cmd = move |args: CommandArgs| -> Result<()> {
-        let opts = cmd_opts.clone();
         let output = args
             .args
             .is_some()
@@ -191,7 +230,7 @@ fn setup(cmd_opts: Opts) -> Result<()> {
             start: args.line1,
             end: args.line2,
             output,
-            ..opts
+            ..cmd_opts.clone()
         })
     };
     api::create_user_command("Silicon", silicon_cmd, Some(&opts))
