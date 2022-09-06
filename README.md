@@ -25,9 +25,7 @@ Plug 'krivahtoo/silicon.nvim', { 'do': './install.sh' }
 
 ```lua
 require('silicon').setup({
-  line1 = 0, -- required
-  line2 = 0, -- required
-  font = 'FantasqueSansMono Nerd Font',
+  font = 'FantasqueSansMono Nerd Font=16',
   theme = 'Monokai Extended',
 })
 ```
@@ -39,24 +37,31 @@ Silicon [file]
 ```
 
 
-The `capture` function accepts the following table:
+The `setup` function accepts the following table:
 
 ```lua
 {
-  line1 = number, -- alias to 'start'
-  line2 = number, -- alias to 'end'
-  -- The following keys are all optional
-  -- with default values
-  font = 'Hack',
-  font_size = 20.0,
-  theme = 'Dracula',
-  line_number = true,
-  line_pad = 2,
-  line_offset = 1,
-  round_corner = true,
-  window_controls = true,
   -- The following key is required if you want to save image to file instead of clipboard
   output = string
+  -- The following keys are all optional
+  -- with default values
+  font = 'Hack=20',
+  theme = 'Dracula',
+  background = '#eff',
+  shadow = {
+    blur_radius = 0.0,
+    offset_x = 0,
+    offset_y = 0,
+    color = '#555'
+  },
+  pad_horiz = 100,
+  pad_vert = 80,
+  line_number = false,
+  line_pad = 2,
+  line_offset = 1,
+  tab_width = 4,
+  round_corner = true,
+  window_controls = true,
 }
 ```
 

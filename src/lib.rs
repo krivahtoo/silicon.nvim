@@ -92,7 +92,6 @@ struct ShadowOpts {
 #[derive(Clone, Serialize, Deserialize)]
 struct Opts {
     font: Option<String>,
-    font_size: Option<f32>,
 
     theme: Option<String>,
 
@@ -116,8 +115,10 @@ struct Opts {
     output: Option<PathBuf>,
 
     #[serde(alias = "line1")]
+    #[serde(default)]
     start: usize,
     #[serde(alias = "line2")]
+    #[serde(default)]
     end: usize,
 }
 
@@ -138,8 +139,27 @@ fn parse_str_color(s: &str) -> anyhow::Result<Rgba<u8>, anyhow::Error> {
         .map_err(|_| format_err!("Invalid color: `{}`", s))?)
 }
 
+fn parse_font_str(s: &str) -> Vec<(String, f32)> {
+    let mut result = vec![];
+    for font in s.split(';') {
+        let tmp = font.split('=').collect::<Vec<_>>();
+        let font_name = tmp[0].to_owned();
+        let font_size = tmp
+            .get(1)
+            .map(|s| s.parse::<f32>().unwrap())
+            .unwrap_or(26.0);
+        result.push((font_name, font_size));
+    }
+    result
+}
+
 fn save_image(opts: Opts) -> Result<()> {
     let (ps, ts) = init_syntect();
+    if opts.start == 0 && opts.end == 0 {
+        return Err(oxi::Error::Other(
+            "line1 and line2 are required when calling `capture` directly".to_owned(),
+        ));
+    }
     let code = api::get_current_buf()
         .get_lines(opts.start - 1, opts.end, false)?
         .fold(String::new(), |a, b| a + b.to_string().as_str() + "\n")
@@ -147,8 +167,12 @@ fn save_image(opts: Opts) -> Result<()> {
         .to_owned();
     let ft: oxi::String = api::get_current_buf().get_option("filetype")?;
 
-    let syntax = ps.find_syntax_by_token(ft.as_str().unwrap()).unwrap();
-    let theme = &ts.themes[opts.theme.unwrap_or(String::from("Dracula")).as_str()];
+    let syntax = ps
+        .find_syntax_by_token(ft.as_str().unwrap())
+        .ok_or(oxi::Error::Other(
+            "Could not find syntax for filetype.".to_owned(),
+        ))?;
+    let theme = &ts.themes[opts.theme.unwrap_or("Dracula".to_owned()).as_str()];
 
     let mut h = HighlightLines::new(syntax, theme);
     let highlight = LinesWithEndings::from(&code)
@@ -157,10 +181,10 @@ fn save_image(opts: Opts) -> Result<()> {
 
     let adder = ShadowAdder::default()
         .background(Background::Solid(
-            parse_str_color(opts.background.unwrap_or(String::from("#eff")).as_str()).unwrap(),
+            parse_str_color(opts.background.unwrap_or("#eef".to_owned()).as_str()).unwrap(),
         ))
         .shadow_color(
-            parse_str_color(opts.shadow.color.unwrap_or(String::from("#555")).as_str()).unwrap(),
+            parse_str_color(opts.shadow.color.unwrap_or("#555".to_owned()).as_str()).unwrap(),
         )
         .blur_radius(opts.shadow.blur_radius)
         .offset_x(opts.shadow.offset_x)
@@ -169,10 +193,9 @@ fn save_image(opts: Opts) -> Result<()> {
         .pad_vert(opts.pad_vert.unwrap_or(100));
 
     let mut formatter = ImageFormatterBuilder::new()
-        .font(vec![(
-            opts.font.unwrap_or(String::from("Hack")).as_str(),
-            opts.font_size.unwrap_or(20.0),
-        )])
+        .font(parse_font_str(
+            opts.font.unwrap_or("Hack=20".to_owned()).as_str(),
+        ))
         .tab_width(opts.tab_width.unwrap_or(4))
         .line_pad(opts.line_pad.unwrap_or(2))
         .line_offset(opts.line_offset.unwrap_or(1))
