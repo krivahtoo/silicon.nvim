@@ -6,8 +6,8 @@ on:
 name: Create Release
 
 jobs:
-  release:
-    name: Publish release
+  build:
+    name: Publish Ubuntu release
     runs-on: ubuntu-latest
 
     steps:
@@ -22,18 +22,27 @@ jobs:
           override: true
 
       - name: build
-        run: cargo build --all --release && strip target/release/libsilicon.so && mv target/release/libsilicon.so target/release/silicon.so
+        run: cargo build --all --release && strip target/release/libsilicon.so && mv target/release/libsilicon.so lua/silicon.so
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@main
+        with:
+          type: 'tar'
+          path: 'lua'
+          filename: 'silicon-linux.tar.gz'
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          generate_release_notes: true
           files: |
-            target/release/silicon.so
+            silicon-linux.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-win:
+    name: Publish Windows release
     runs-on: windows-latest
 
     steps:
@@ -50,10 +59,58 @@ jobs:
       - name: Build
         run: cargo build --all --release
 
+      - name: Copy file
+        run: copy target\release\silicon.dll .\lua
+        shell: cmd
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@main
+        with:
+          type: 'zip'
+          path: 'lua'
+          filename: 'silicon-win.zip'
+
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: target/release/silicon.dll
+          files: silicon-win.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-mac:
+    name: Publish MacOS release
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-apple-darwin
+          default: true
+          override: true
+
+      - name: build
+        run: cargo build --all --release && strip target/release/libsilicon.dylib && mv target/release/libsilicon.dylib lua/silicon.so
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@main
+        with:
+          type: 'tar'
+          path: 'lua'
+          filename: 'silicon-mac.tar.gz'
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          files: |
+            silicon-mac.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
