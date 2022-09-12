@@ -43,7 +43,7 @@ pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
 }
 
 #[cfg(target_os = "macos")]
-pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<(), Error> {
+pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
     let mut temp = tempfile::NamedTempFile::new()?;
     image.write_to(&mut temp, ImageOutputFormat::Png)?;
     unsafe {
@@ -53,7 +53,7 @@ pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<(), Error
 }
 
 #[cfg(target_os = "windows")]
-pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<(), Error> {
+pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
     let mut temp: Vec<u8> = Vec::new();
 
     // Convert the image to RGB without alpha because the clipboard
@@ -72,7 +72,7 @@ pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<(), Error
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
-pub fn dump_image_to_clipboard(_image: &DynamicImage) -> anyhow::Result<(), Error> {
+pub fn dump_image_to_clipboard(_image: &DynamicImage) -> anyhow::Result<()> {
     Err(format_err!(
         "This feature hasn't been implemented for your system"
     ))
