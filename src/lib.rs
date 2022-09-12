@@ -256,14 +256,13 @@ fn setup(cmd_opts: Opts) -> Result<()> {
             ..cmd_opts.clone()
         })
     };
-    api::create_user_command("Silicon", silicon_cmd, Some(&opts))
+    api::create_user_command("Silicon", silicon_cmd, Some(&opts))?;
+    // Remaps `SS` to `Silicon` in visual mode.
+    api::set_keymap(Mode::Visual, "SS", "Silicon", Some(&SetKeymapOptsBuilder::default().desc("Save image of code").silent(true).build()))
 }
 
 #[oxi::module]
 fn silicon() -> Result<Dictionary> {
-    // Remaps `SS` to `Silicon` in visual mode.
-    // api::set_keymap(Mode::Insert, "SS", "Silicon", Some(&SetKeymapOptsBuilder::default().desc("Save image of code").silent(true).build()))?;
-
     Ok(Dictionary::from_iter([
         ("capture", Function::from_fn(save_image)),
         ("setup", Function::from_fn(setup)),

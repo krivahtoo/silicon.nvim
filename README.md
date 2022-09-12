@@ -7,7 +7,7 @@ Render beautiful image of your code in neovim using [silicon](https://github.com
 ### Requirements
 
 - nvim `v0.7`
-- cargo
+- cargo and rust toolchain
 
 #### Packer
 
@@ -33,7 +33,8 @@ require('silicon').setup({
 Command:
 
 ```bash
-Silicon [file]
+:Silicon [file]
+# also mapped to 'SS' in Visual mode
 ```
 
 
