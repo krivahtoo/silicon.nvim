@@ -95,7 +95,7 @@ jobs:
           override: true
 
       - name: build
-        run: cargo build --all --release && strip target/release/libsilicon.dylib && mv target/release/libsilicon.dylib lua/silicon.so
+        run: cargo build --all --release && mv target/release/libsilicon.dylib lua/silicon.so
 
       - name: Archive Release
         uses: thedoctor0/zip-release@main
