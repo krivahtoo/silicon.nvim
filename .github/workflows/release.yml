@@ -56,6 +56,12 @@ jobs:
           default: true
           override: true
 
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+            neovim: true
+            version: stable
+
       - name: Build
         run: cargo build --all --release
 
