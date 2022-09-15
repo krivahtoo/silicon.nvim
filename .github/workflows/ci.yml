@@ -29,7 +29,7 @@ jobs:
             version: stable
 
       - name: build
-        run: cargo build && mv target/release/libsilicon.so lua/silicon.so
+        run: cargo build && mv target/debug/libsilicon.so lua/silicon.so
 
       - name: Test with nvim
         run: nvim -u NONE --headless +":set rtp+=./" +":lua require'silicon'" +quit
@@ -59,7 +59,7 @@ jobs:
         run: cargo build
 
       - name: Copy file
-        run: copy target\release\silicon.dll .\lua
+        run: copy target\debug\silicon.dll .\lua
         shell: cmd
 
       - name: Test with nvim
@@ -88,7 +88,7 @@ jobs:
             version: stable
 
       - name: build
-        run: cargo build && mv target/release/libsilicon.dylib lua/silicon.so
+        run: cargo build && mv target/debug/libsilicon.dylib lua/silicon.so
 
       - name: Test with nvim
         run: nvim -u NONE --headless +":set rtp+=./" +":lua require'silicon'" +quit
