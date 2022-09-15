@@ -33,8 +33,9 @@ require('silicon').setup({
 Command:
 
 ```bash
-:Silicon [file]
-# also mapped to 'SS' in Visual mode
+:'<,'>Silicon [file]
+# Defaults to clipboard if [file] is not specified.
+# Also mapped to 'SS' in Visual mode
 ```
 
 
