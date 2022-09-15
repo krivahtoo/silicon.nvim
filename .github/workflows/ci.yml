@@ -25,14 +25,16 @@ jobs:
       - name: Install Neovim
         uses: rhysd/action-setup-vim@v1
         with:
-            neovim: true
-            version: stable
+          neovim: true
+          version: stable
 
       - name: build
         run: cargo build && mv target/debug/libsilicon.so lua/silicon.so
 
       - name: Test with nvim
         run: nvim -u NONE --headless +":set rtp+=./" +":lua require'silicon'" +quit
+        env:
+          RUST_BACKTRACE: 1
 
   build-win:
     name: Windows test
@@ -52,8 +54,8 @@ jobs:
       - name: Install Neovim
         uses: rhysd/action-setup-vim@v1
         with:
-            neovim: true
-            version: stable
+          neovim: true
+          version: stable
 
       - name: Build
         run: cargo build
@@ -63,7 +65,9 @@ jobs:
         shell: cmd
 
       - name: Test with nvim
-        run: nvim -u NONE --headless +":set rtp+=./" +":lua require'silicon'" +quit
+        run: nvim -u NONE --headless +":set rtp+=.\\" +":lua require'silicon'" +quit
+        env:
+          RUST_BACKTRACE: 1
 
   build-mac:
     name: MacOS test
@@ -84,11 +88,13 @@ jobs:
       - name: Install Neovim
         uses: rhysd/action-setup-vim@v1
         with:
-            neovim: true
-            version: stable
+          neovim: true
+          version: stable
 
       - name: build
         run: cargo build && mv target/debug/libsilicon.dylib lua/silicon.so
 
       - name: Test with nvim
         run: nvim -u NONE --headless +":set rtp+=./" +":lua require'silicon'" +quit
+        env:
+          RUST_BACKTRACE: 1
