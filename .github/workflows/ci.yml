@@ -1,0 +1,94 @@
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+name: Test
+
+jobs:
+  build:
+    name: Ubuntu test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+            neovim: true
+            version: stable
+
+      - name: build
+        run: cargo build && mv target/release/libsilicon.so lua/silicon.so
+
+      - name: Test with nvim
+        run: nvim -u NONE --headless +":set rtp+=./" +":lua require'silicon'" +quit
+
+  build-win:
+    name: Windows test
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+            neovim: true
+            version: stable
+
+      - name: Build
+        run: cargo build
+
+      - name: Copy file
+        run: copy target\release\silicon.dll .\lua
+        shell: cmd
+
+      - name: Test with nvim
+        run: nvim -u NONE --headless +":set rtp+=./" +":lua require'silicon'" +quit
+
+  build-mac:
+    name: MacOS test
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-apple-darwin
+          default: true
+          override: true
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+            neovim: true
+            version: stable
+
+      - name: build
+        run: cargo build && mv target/release/libsilicon.dylib lua/silicon.so
+
+      - name: Test with nvim
+        run: nvim -u NONE --headless +":set rtp+=./" +":lua require'silicon'" +quit
