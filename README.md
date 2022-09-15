@@ -7,7 +7,7 @@ Render beautiful image of your code in neovim using [silicon](https://github.com
 ### Requirements
 
 - nvim `v0.7`
-- cargo and rust toolchain
+- **[Optional]** cargo and rust toolchain
 
 #### Packer
 

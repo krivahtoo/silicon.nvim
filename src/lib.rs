@@ -135,8 +135,8 @@ impl ToObject for Opts {
 }
 
 fn parse_str_color(s: &str) -> anyhow::Result<Rgba<u8>, anyhow::Error> {
-    Ok(s.to_rgba()
-        .map_err(|_| format_err!("Invalid color: `{}`", s))?)
+    s.to_rgba()
+        .map_err(|_| format_err!("Invalid color: `{}`", s))
 }
 
 fn parse_font_str(s: &str) -> Vec<(String, f32)> {
@@ -169,7 +169,7 @@ fn save_image(opts: Opts) -> Result<()> {
 
     let syntax = ps
         .find_syntax_by_token(ft.as_str().unwrap())
-        .ok_or(oxi::Error::Other(
+        .ok_or_else(|| oxi::Error::Other(
             "Could not find syntax for filetype.".to_owned(),
         ))?;
     let theme = &ts.themes[opts.theme.unwrap_or("Dracula".to_owned()).as_str()];
