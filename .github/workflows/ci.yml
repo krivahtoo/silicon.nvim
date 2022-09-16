@@ -65,7 +65,8 @@ jobs:
         shell: cmd
 
       - name: Test with nvim
-        run: nvim -u NONE --headless +":set rtp+=.\\" +":lua require'silicon'" +quit
+        run: nvim -u NONE --headless +":set rtp+=./" +":lua require'silicon'" +quit
+        shell: bash
         env:
           RUST_BACKTRACE: 1
 
