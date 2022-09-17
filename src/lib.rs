@@ -155,7 +155,7 @@ fn parse_font_str(s: &str) -> Vec<(String, f32)> {
 
 fn save_image(opts: Opts) -> Result<()> {
     let (ps, ts) = init_syntect();
-    if opts.start == 0 && opts.end == 0 {
+    if opts.start == 0 || opts.end == 0 {
         return Err(oxi::Error::Other(
             "line1 and line2 are required when calling `capture` directly".to_owned(),
         ));
@@ -169,9 +169,7 @@ fn save_image(opts: Opts) -> Result<()> {
 
     let syntax = ps
         .find_syntax_by_token(ft.as_str().unwrap())
-        .ok_or_else(|| oxi::Error::Other(
-            "Could not find syntax for filetype.".to_owned(),
-        ))?;
+        .ok_or_else(|| oxi::Error::Other("Could not find syntax for filetype.".to_owned()))?;
     let theme = &ts.themes[opts.theme.unwrap_or("Dracula".to_owned()).as_str()];
 
     let mut h = HighlightLines::new(syntax, theme);
@@ -258,7 +256,17 @@ fn setup(cmd_opts: Opts) -> Result<()> {
     };
     api::create_user_command("Silicon", silicon_cmd, Some(&opts))?;
     // Remaps `SS` to `Silicon` in visual mode.
-    api::set_keymap(Mode::Visual, "SS", "Silicon", Some(&SetKeymapOptsBuilder::default().desc("Save image of code").silent(true).build()))
+    api::set_keymap(
+        Mode::Visual,
+        "SS",
+        "Silicon",
+        Some(
+            &SetKeymapOptsBuilder::default()
+                .desc("Save image of code")
+                .silent(true)
+                .build(),
+        ),
+    )
 }
 
 #[oxi::module]
