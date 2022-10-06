@@ -4,11 +4,13 @@ extern crate anyhow;
 use std::path::PathBuf;
 
 use nvim_oxi::{
-    self as oxi, api, object, opts::*, types::*, Dictionary, FromObject, Function, Object, Result,
-    ToObject,
+    self as oxi,
+    api::{self, opts::*, types::*},
+    Dictionary, FromObject, Function, Object, ToObject,
 };
 
 use image::{DynamicImage, Rgba};
+use oxi::{FromObjectResult, ToObjectResult};
 use serde::{Deserialize, Serialize};
 use silicon::formatter::ImageFormatterBuilder;
 use silicon::utils::{init_syntect, Background, ShadowAdder, ToRgba};
@@ -123,14 +125,32 @@ struct Opts {
 }
 
 impl FromObject for Opts {
-    fn from_obj(obj: Object) -> Result<Self> {
-        Self::deserialize(object::Deserializer::new(obj))
+    fn from_obj(obj: Object) -> FromObjectResult<Self> {
+        Self::deserialize(oxi::Deserializer::new(obj)).map_err(Into::into)
     }
 }
 
 impl ToObject for Opts {
-    fn to_obj(self) -> Result<Object> {
-        self.serialize(object::Serializer::new())
+    fn to_obj(self) -> ToObjectResult {
+        self.serialize(oxi::Serializer::new()).map_err(Into::into)
+    }
+}
+
+impl oxi::lua::Poppable for Opts {
+    unsafe fn pop(lstate: *mut oxi::lua::ffi::lua_State) -> Result<Self, oxi::lua::Error> {
+        let obj = Object::pop(lstate)?;
+        Self::from_obj(obj).map_err(oxi::lua::Error::pop_error_from_err::<Self, _>)
+    }
+}
+
+impl oxi::lua::Pushable for Opts {
+    unsafe fn push(
+        self,
+        lstate: *mut oxi::lua::ffi::lua_State,
+    ) -> Result<std::ffi::c_int, oxi::lua::Error> {
+        self.to_obj()
+            .map_err(oxi::lua::Error::push_error_from_err::<Self, _>)?
+            .push(lstate)
     }
 }
 
@@ -153,12 +173,13 @@ fn parse_font_str(s: &str) -> Vec<(String, f32)> {
     result
 }
 
-fn save_image(opts: Opts) -> Result<()> {
+fn save_image(opts: Opts) -> oxi::Result<()> {
     let (ps, ts) = init_syntect();
     if opts.start == 0 || opts.end == 0 {
-        return Err(oxi::Error::Other(
+        return Err(api::Error::Other(
             "line1 and line2 are required when calling `capture` directly".to_owned(),
-        ));
+        ))
+        .map_err(Into::into);
     }
     let code = api::get_current_buf()
         .get_lines(opts.start - 1, opts.end, false)?
@@ -169,7 +190,7 @@ fn save_image(opts: Opts) -> Result<()> {
 
     let syntax = ps
         .find_syntax_by_token(ft.as_str().unwrap())
-        .ok_or_else(|| oxi::Error::Other("Could not find syntax for filetype.".to_owned()))?;
+        .ok_or_else(|| api::Error::Other("Could not find syntax for filetype.".to_owned()))?;
     let theme = &ts.themes[opts.theme.unwrap_or("Dracula".to_owned()).as_str()];
 
     let mut h = HighlightLines::new(syntax, theme);
@@ -214,7 +235,7 @@ fn save_image(opts: Opts) -> Result<()> {
                 api::notify(
                     "Image saved to file",
                     LogLevel::Info,
-                    Some(&NotifyOpts::default()),
+                    &NotifyOpts::default(),
                 )?;
             }
         };
@@ -225,7 +246,7 @@ fn save_image(opts: Opts) -> Result<()> {
                 api::notify(
                     "Image saved to clipboard",
                     LogLevel::Info,
-                    Some(&NotifyOpts::default()),
+                    &NotifyOpts::default(),
                 )?;
             }
         };
@@ -234,7 +255,7 @@ fn save_image(opts: Opts) -> Result<()> {
     Ok(())
 }
 
-fn setup(cmd_opts: Opts) -> Result<()> {
+fn setup(cmd_opts: Opts) -> oxi::Result<()> {
     // Create a new `Silicon` command.
     let opts = CreateCommandOpts::builder()
         .range(CommandRange::CurrentLine)
@@ -242,7 +263,7 @@ fn setup(cmd_opts: Opts) -> Result<()> {
         .nargs(CommandNArgs::ZeroOrOne)
         .build();
 
-    let silicon_cmd = move |args: CommandArgs| -> Result<()> {
+    let silicon_cmd = move |args: CommandArgs| {
         let output = args
             .args
             .is_some()
@@ -252,25 +273,25 @@ fn setup(cmd_opts: Opts) -> Result<()> {
             end: args.line2,
             output,
             ..cmd_opts.clone()
-        })
+        }).ok();
+        Ok(())
     };
-    api::create_user_command("Silicon", silicon_cmd, Some(&opts))?;
+    api::create_user_command("Silicon", silicon_cmd, &opts)?;
     // Remaps `SS` to `Silicon` in visual mode.
     api::set_keymap(
         Mode::Visual,
         "SS",
         "Silicon",
-        Some(
-            &SetKeymapOptsBuilder::default()
-                .desc("Save image of code")
-                .silent(true)
-                .build(),
-        ),
+        &SetKeymapOptsBuilder::default()
+            .desc("Save image of code")
+            .silent(true)
+            .build(),
     )
+    .map_err(Into::into)
 }
 
 #[oxi::module]
-fn silicon() -> Result<Dictionary> {
+fn silicon() -> oxi::Result<Dictionary> {
     Ok(Dictionary::from_iter([
         ("capture", Function::from_fn(save_image)),
         ("setup", Function::from_fn(setup)),
