@@ -10,11 +10,9 @@ get_latest_release() {
 download() {
   echo "Downloading silicon.nvim library: " $1
   if [ "$(uname)" == "Darwin" ]; then
-    curl -fsSL https://github.com/krivahtoo/silicon.nvim/releases/download/$1/silicon-mac.tar.gz --output silicon-mac.tar.gz
-    tar -xaf silicon-mac.tar.gz
+    curl -fsSL https://github.com/krivahtoo/silicon.nvim/releases/download/$1/silicon-mac.tar.gz | tar -xz
   elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-    curl -fsSL https://github.com/krivahtoo/silicon.nvim/releases/download/$1/silicon-linux.tar.gz --output silicon-linux.tar.gz
-    tar -xaf silicon-linux.tar.gz
+    curl -fsSL https://github.com/krivahtoo/silicon.nvim/releases/download/$1/silicon-linux.tar.gz | tar -xz
   elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
     curl -fsSL https://github.com/krivahtoo/silicon.nvim/releases/download/$1/silicon-win.zip --output silicon-win.zip
     unzip silicon-win.zip
