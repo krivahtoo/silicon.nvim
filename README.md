@@ -2,6 +2,9 @@
 
 Render beautiful image of your code in neovim using [silicon](https://github.com/Aloxaf/silicon).
 
+![image](https://user-images.githubusercontent.com/41364823/194313504-35f02cff-1e58-45b1-8951-eed8d172b622.png)
+
+
 ## Installation
 
 ### Requirements
@@ -15,10 +18,22 @@ Render beautiful image of your code in neovim using [silicon](https://github.com
 use {'krivahtoo/silicon.nvim', run = './install.sh'}
 ```
 
+Build from source (requires cargo)
+
+```lua
+use {'krivahtoo/silicon.nvim', run = './install.sh build'}
+```
+
 #### Vim-Plug
 
 ```vim
 Plug 'krivahtoo/silicon.nvim', { 'do': './install.sh' }
+```
+
+Build from source (requires cargo)
+
+```vim
+Plug 'krivahtoo/silicon.nvim', { 'do': './install.sh build' }
 ```
 
 ## Usage
