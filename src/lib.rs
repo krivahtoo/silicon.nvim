@@ -166,7 +166,7 @@ fn parse_font_str(s: &str) -> Vec<(String, f32)> {
         let font_name = tmp[0].to_owned();
         let font_size = tmp
             .get(1)
-            .map(|s| s.parse::<f32>().unwrap())
+            .map(|s| s.parse::<f32>().unwrap_or(26.0))
             .unwrap_or(26.0);
         result.push((font_name, font_size));
     }
