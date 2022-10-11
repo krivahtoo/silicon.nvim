@@ -3,14 +3,12 @@ extern crate anyhow;
 
 use std::path::PathBuf;
 
-use nvim_oxi::{
-    self as oxi,
-    api::{self, opts::*, types::*},
-    Dictionary, FromObject, Function, Object, ToObject,
-};
-
 use image::{DynamicImage, Rgba};
-use oxi::{FromObjectResult, ToObjectResult};
+use nvim_oxi as oxi;
+use oxi::{
+    api::{self, opts::*, types::*},
+    Dictionary, FromObject, FromObjectResult, Function, Object, ToObject, ToObjectResult,
+};
 use serde::{Deserialize, Serialize};
 use silicon::formatter::ImageFormatterBuilder;
 use silicon::utils::{init_syntect, Background, ShadowAdder, ToRgba};
@@ -258,7 +256,7 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
 fn setup(cmd_opts: Opts) -> oxi::Result<()> {
     // Create a new `Silicon` command.
     let opts = CreateCommandOpts::builder()
-        .range(CommandRange::CurrentLine)
+        .range(CommandRange::WholeFile)
         .desc("create a beautiful image of your source code.")
         .nargs(CommandNArgs::ZeroOrOne)
         .build();
@@ -273,7 +271,8 @@ fn setup(cmd_opts: Opts) -> oxi::Result<()> {
             end: args.line2,
             output,
             ..cmd_opts.clone()
-        }).ok();
+        })
+        .ok();
         Ok(())
     };
     api::create_user_command("Silicon", silicon_cmd, &opts)?;
