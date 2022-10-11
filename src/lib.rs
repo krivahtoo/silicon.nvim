@@ -198,10 +198,10 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
 
     let adder = ShadowAdder::default()
         .background(Background::Solid(
-            parse_str_color(opts.background.unwrap_or("#eef".to_owned()).as_str()).unwrap(),
+            parse_str_color(opts.background.unwrap_or_else(|| "#eef".to_owned()).as_str()).unwrap(),
         ))
         .shadow_color(
-            parse_str_color(opts.shadow.color.unwrap_or("#555".to_owned()).as_str()).unwrap(),
+            parse_str_color(opts.shadow.color.unwrap_or_else(|| "#555".to_owned()).as_str()).unwrap(),
         )
         .blur_radius(opts.shadow.blur_radius)
         .offset_x(opts.shadow.offset_x)
@@ -211,7 +211,7 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
 
     let mut formatter = ImageFormatterBuilder::new()
         .font(parse_font_str(
-            opts.font.unwrap_or("Hack=20".to_owned()).as_str(),
+            opts.font.unwrap_or_else(|| "Hack=20".to_owned()).as_str(),
         ))
         .tab_width(opts.tab_width.unwrap_or(4))
         .line_pad(opts.line_pad.unwrap_or(2))
