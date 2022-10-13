@@ -62,7 +62,7 @@ jobs:
         run: cargo build
 
       - name: Copy file
-        run: copy target\x86_64-pc-windows-gnu\debug\silicon.dll .\lua
+        run: copy target\debug\silicon.dll .\lua
         shell: cmd
 
       - name: Test with nvim
