@@ -11,7 +11,8 @@ get_version() {
 download() {
   echo "Downloading silicon.nvim library: " $1
   if [ "$(uname)" == "Darwin" ]; then
-    curl -fsSL https://github.com/krivahtoo/silicon.nvim/releases/download/$1/silicon-mac.tar.gz | tar -xz
+    arch_name="$(uname -m)"
+    curl -fsSL https://github.com/krivahtoo/silicon.nvim/releases/download/$1/silicon-mac-${arch_name}.tar.gz | tar -xz
   elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     curl -fsSL https://github.com/krivahtoo/silicon.nvim/releases/download/$1/silicon-linux.tar.gz | tar -xz
   elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then

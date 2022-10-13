@@ -102,7 +102,7 @@ jobs:
         with:
           type: 'tar'
           path: 'lua'
-          filename: 'silicon-mac.tar.gz'
+          filename: 'silicon-mac-x86_64.tar.gz'
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -110,7 +110,42 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            silicon-mac.tar.gz
+            silicon-mac-x86_64.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  build-mac-arm64:
+    name: Publish MacOS arm64 release
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-apple-darwin
+          default: true
+          override: true
+
+      - name: build
+        run: cargo build --all --release && mv target/release/libsilicon.dylib lua/silicon.so
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@main
+        with:
+          type: 'tar'
+          path: 'lua'
+          filename: 'silicon-mac-arm64.tar.gz'
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          files: |
+            silicon-mac-arm64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
