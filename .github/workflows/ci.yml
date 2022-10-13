@@ -48,6 +48,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: x86_64-pc-windows-gnu
           default: true
           override: true
 
@@ -61,7 +62,7 @@ jobs:
         run: cargo build
 
       - name: Copy file
-        run: copy target\debug\silicon.dll .\lua
+        run: copy target\x86_64-pc-windows-gnu\debug\silicon.dll .\lua
         shell: cmd
 
       - name: Test with nvim
