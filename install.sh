@@ -2,8 +2,9 @@
 
 set -e
 
-get_latest_release() {
-  curl --silent "https://api.github.com/repos/krivahtoo/silicon.nvim/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' # Pluck JSON value
+# get current version from Cargo.toml
+get_version() {
+  cat Cargo.toml | grep '^version =' | sed -E 's/.*"([^"]+)".*/\1/'
 }
 
 # download the silicon.nvim (of the specified version) from Releases
@@ -37,7 +38,7 @@ case "$1" in
     fi
     ;;
   *)
-    version=$(get_latest_release)
+    version="v$(get_version)"
     download $version
 
     ;;
