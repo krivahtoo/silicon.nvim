@@ -36,8 +36,11 @@ Build from source (requires cargo)
 Plug 'krivahtoo/silicon.nvim', { 'do': './install.sh build' }
 ```
 
-## Usage
+## Configuration
 
+Initialize the plugin.
+
+Lua init file:
 ```lua
 require('silicon').setup({
   font = 'FantasqueSansMono Nerd Font=16',
@@ -45,14 +48,15 @@ require('silicon').setup({
 })
 ```
 
-Command:
-
-```bash
-:'<,'>Silicon [file]
-# Defaults to clipboard if [file] is not specified.
-# Also mapped to 'SS' in Visual mode
+Vimscript init file:
 ```
-
+lua << EOF
+require('silicon').setup({
+  font = 'FantasqueSansMono Nerd Font=16',
+  theme = 'Monokai Extended',
+})
+EOF
+```
 
 The `setup` function accepts the following table:
 
@@ -82,3 +86,12 @@ The `setup` function accepts the following table:
 }
 ```
 
+## Usage
+
+Command:
+
+```bash
+:'<,'>Silicon [file]
+# Defaults to clipboard if [file] is not specified.
+# Also mapped to 'SS' in Visual mode
+```
