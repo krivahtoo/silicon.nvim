@@ -1,19 +1,26 @@
 #[macro_use]
 extern crate anyhow;
 
+mod config;
+mod utils;
+
 use std::path::PathBuf;
 
-use image::{DynamicImage, Rgba};
+use config::Opts;
+use utils::{IntoFontStyle, IntoFont, parse_str_color};
+
+use image::DynamicImage;
 use nvim_oxi as oxi;
 use oxi::{
     api::{self, opts::*, types::*},
-    Dictionary, FromObject, FromObjectResult, Function, Object, ToObject, ToObjectResult,
+    Dictionary, Function,
 };
-use serde::{Deserialize, Serialize};
-use silicon::formatter::ImageFormatterBuilder;
-use silicon::utils::{init_syntect, Background, ShadowAdder, ToRgba};
-use syntect::easy::HighlightLines;
-use syntect::util::LinesWithEndings;
+use silicon::{
+    font::FontCollection,
+    formatter::ImageFormatterBuilder,
+    utils::{init_syntect, Background, ShadowAdder, ToRgba},
+};
+use syntect::{easy::HighlightLines, util::LinesWithEndings};
 
 #[cfg(target_os = "windows")]
 use {
@@ -78,99 +85,6 @@ pub fn dump_image_to_clipboard(_image: &DynamicImage) -> anyhow::Result<()> {
     ))
 }
 
-#[derive(Clone, Serialize, Deserialize, Default)]
-struct ShadowOpts {
-    #[serde(default)]
-    blur_radius: f32,
-    #[serde(default)]
-    offset_x: i32,
-    #[serde(default)]
-    offset_y: i32,
-    color: Option<String>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-struct Opts {
-    font: Option<String>,
-
-    theme: Option<String>,
-
-    background: Option<String>,
-
-    #[serde(default)]
-    shadow: ShadowOpts,
-
-    pad_horiz: Option<u32>,
-    pad_vert: Option<u32>,
-
-    line_number: Option<bool>,
-    line_pad: Option<u32>,
-    line_offset: Option<u32>,
-
-    tab_width: Option<u8>,
-
-    round_corner: Option<bool>,
-    window_controls: Option<bool>,
-
-    output: Option<PathBuf>,
-
-    #[serde(alias = "line1")]
-    #[serde(default)]
-    start: usize,
-    #[serde(alias = "line2")]
-    #[serde(default)]
-    end: usize,
-}
-
-impl FromObject for Opts {
-    fn from_obj(obj: Object) -> FromObjectResult<Self> {
-        Self::deserialize(oxi::Deserializer::new(obj)).map_err(Into::into)
-    }
-}
-
-impl ToObject for Opts {
-    fn to_obj(self) -> ToObjectResult {
-        self.serialize(oxi::Serializer::new()).map_err(Into::into)
-    }
-}
-
-impl oxi::lua::Poppable for Opts {
-    unsafe fn pop(lstate: *mut oxi::lua::ffi::lua_State) -> Result<Self, oxi::lua::Error> {
-        let obj = Object::pop(lstate)?;
-        Self::from_obj(obj).map_err(oxi::lua::Error::pop_error_from_err::<Self, _>)
-    }
-}
-
-impl oxi::lua::Pushable for Opts {
-    unsafe fn push(
-        self,
-        lstate: *mut oxi::lua::ffi::lua_State,
-    ) -> Result<std::ffi::c_int, oxi::lua::Error> {
-        self.to_obj()
-            .map_err(oxi::lua::Error::push_error_from_err::<Self, _>)?
-            .push(lstate)
-    }
-}
-
-fn parse_str_color(s: &str) -> anyhow::Result<Rgba<u8>, anyhow::Error> {
-    s.to_rgba()
-        .map_err(|_| format_err!("Invalid color: `{}`", s))
-}
-
-fn parse_font_str(s: &str) -> Vec<(String, f32)> {
-    let mut result = vec![];
-    for font in s.split(';') {
-        let tmp = font.split('=').collect::<Vec<_>>();
-        let font_name = tmp[0].to_owned();
-        let font_size = tmp
-            .get(1)
-            .map(|s| s.parse::<f32>().unwrap_or(26.0))
-            .unwrap_or(26.0);
-        result.push((font_name, font_size));
-    }
-    result
-}
-
 fn save_image(opts: Opts) -> oxi::Result<()> {
     let (ps, ts) = init_syntect();
     if opts.start == 0 || opts.end == 0 {
@@ -189,7 +103,7 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
     let syntax = ps
         .find_syntax_by_token(ft.as_str().unwrap())
         .ok_or_else(|| api::Error::Other("Could not find syntax for filetype.".to_owned()))?;
-    let theme = &ts.themes[opts.theme.unwrap_or("Dracula".to_owned()).as_str()];
+    let theme = &ts.themes[opts.theme.unwrap_or_else(|| "Dracula".to_owned()).as_str()];
 
     let mut h = HighlightLines::new(syntax, theme);
     let highlight = LinesWithEndings::from(&code)
@@ -220,10 +134,10 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
         .pad_horiz(opts.pad_horiz.unwrap_or(80))
         .pad_vert(opts.pad_vert.unwrap_or(100));
 
+    let fonts = opts.font.unwrap_or_else(|| "Hack=20".to_owned()).to_font();
+
     let mut formatter = ImageFormatterBuilder::new()
-        .font(parse_font_str(
-            opts.font.unwrap_or_else(|| "Hack=20".to_owned()).as_str(),
-        ))
+        .font(fonts.clone())
         .tab_width(opts.tab_width.unwrap_or(4))
         .line_pad(opts.line_pad.unwrap_or(2))
         .line_offset(opts.line_offset.unwrap_or(1))
@@ -233,10 +147,35 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
         .shadow_adder(adder)
         .build()
         .unwrap();
-    let image = formatter.format(&highlight, theme);
+    let mut image = formatter.format(&highlight, theme);
 
-    if opts.output.is_some() {
-        match image.save(opts.output.unwrap().as_path()) {
+    if let Some(text) = opts.watermark.text {
+        let font = FontCollection::new(fonts.as_slice()).unwrap();
+
+        let (x, y) = (
+            image.to_rgba8().width() - (font.get_text_len(text.as_str()) + font.get_text_len("  ")),
+            image.to_rgba8().height() - (font.get_font_height() * 2),
+        );
+
+        font.draw_text_mut(
+            &mut image,
+            opts.watermark
+                .color
+                .unwrap_or_else(|| "#222".to_owned())
+                .to_rgba()
+                .unwrap(),
+            x,
+            y,
+            opts.watermark
+                .style
+                .unwrap_or_else(|| "bold".to_owned())
+                .to_style(),
+            text.as_str(),
+        );
+    }
+
+    if let Some(output) = opts.output {
+        match image.save(output.as_path()) {
             Err(e) => {
                 api::err_writeln(format!("[silicon.nvim]: Failed to save image: {e}").as_str())
             }
