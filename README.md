@@ -56,7 +56,7 @@ require('silicon').setup({
 ```
 
 Vimscript init file:
-```
+```vim
 lua << EOF
 require('silicon').setup({
   font = 'FantasqueSansMono Nerd Font=16',
