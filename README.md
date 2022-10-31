@@ -90,6 +90,11 @@ The `setup` function accepts the following table:
   tab_width = 4,
   round_corner = true,
   window_controls = true,
+  watermark = {
+    text = nil, -- add this to enable watermark on the bottom-right.
+    color = '#222',
+    style = 'bold', -- possible values: 'bold' | 'italic' | 'bolditalic' | anything else defaults to 'regular'.
+  },
 }
 ```
 
