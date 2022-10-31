@@ -1,9 +1,16 @@
+<div align="center">
+
 # silicon.nvim
 
 Render beautiful image of your code in neovim using [silicon](https://github.com/Aloxaf/silicon).
 
-![image](https://user-images.githubusercontent.com/41364823/194313504-35f02cff-1e58-45b1-8951-eed8d172b622.png)
+[![Release](https://github.com/krivahtoo/silicon.nvim/actions/workflows/release.yml/badge.svg)](https://github.com/krivahtoo/silicon.nvim/actions/workflows/ci.yml)
+![License](https://img.shields.io/github/license/krivahtoo/silicon.nvim)
+![Neovim version](https://img.shields.io/badge/Neovim-0.7-57A143?logo=neovim)
 
+</div>
+
+![image](https://user-images.githubusercontent.com/41364823/194313504-35f02cff-1e58-45b1-8951-eed8d172b622.png)
 
 ## Installation
 
