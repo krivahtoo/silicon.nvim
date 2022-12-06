@@ -25,7 +25,7 @@ case "$1" in
   build)
     echo "Building silicon.nvim from source..."
 
-    cargo build --release 
+    cargo build --release --target-dir ./target
 
     # Place the compiled library where Neovim can find it.
     mkdir -p lua
