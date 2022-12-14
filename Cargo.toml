@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow = "1"
 tempfile = "3"
-nvim-oxi = { git = "https://github.com/noib3/nvim-oxi.git", features = ["neovim-0-8"]  }
+nvim-oxi = { version = "0.2.2", features = ["neovim-nightly"]  }
 serde = { version = '1.0', features = ["derive"] }
 silicon = { version = '0', default-features = false }
 

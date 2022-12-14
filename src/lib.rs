@@ -7,12 +7,12 @@ mod utils;
 use std::path::PathBuf;
 
 use config::Opts;
-use utils::{IntoFontStyle, IntoFont, parse_str_color};
+use utils::{parse_str_color, IntoFont, IntoFontStyle};
 
 use image::DynamicImage;
 use nvim_oxi as oxi;
 use oxi::{
-    api::{self, opts::*, types::*},
+    api::{self, opts::*, types::*, Buffer},
     Dictionary, Function,
 };
 use silicon::{
@@ -37,7 +37,7 @@ pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
     let mut temp = tempfile::NamedTempFile::new()?;
     image.write_to(&mut temp, ImageOutputFormat::Png)?;
     Command::new("xclip")
-        .args(&[
+        .args([
             "-sel",
             "clip",
             "-t",
@@ -93,12 +93,12 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
         ))
         .map_err(Into::into);
     }
-    let code = api::get_current_buf()
-        .get_lines(opts.start - 1, opts.end, false)?
+    let code = Buffer::current()
+        .get_lines((opts.start - 1)..=opts.end, false)?
         .fold(String::new(), |a, b| a + b.to_string().as_str() + "\n")
         .as_str()
         .to_owned();
-    let ft: oxi::String = api::get_current_buf().get_option("filetype")?;
+    let ft: oxi::String = Buffer::current().get_option("filetype")?;
 
     let syntax = ps
         .find_syntax_by_token(ft.as_str().unwrap())
