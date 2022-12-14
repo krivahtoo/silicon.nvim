@@ -95,9 +95,7 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
     }
     let code = Buffer::current()
         .get_lines((opts.start - 1)..=opts.end, false)?
-        .fold(String::new(), |a, b| a + b.to_string().as_str() + "\n")
-        .as_str()
-        .to_owned();
+        .fold(String::new(), |a, b| a + b.to_string().as_str() + "\n");
     let ft: oxi::String = Buffer::current().get_option("filetype")?;
 
     let syntax = ps
