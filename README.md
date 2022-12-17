@@ -10,7 +10,11 @@ Render beautiful image of your code in neovim using [silicon](https://github.com
 
 </div>
 
-![image](https://user-images.githubusercontent.com/41364823/194313504-35f02cff-1e58-45b1-8951-eed8d172b622.png)
+
+
+https://user-images.githubusercontent.com/41364823/208242473-a65d0a0e-37a9-47f1-a4c2-fdc4da2f50ea.mp4
+
+
 
 ## Installation
 
