@@ -144,7 +144,7 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
         .round_corner(opts.round_corner.unwrap_or(true))
         .shadow_adder(adder)
         .build()
-        .unwrap();
+        .map_err(|e| api::Error::Other(format!("font error: {}", e)))?;
     let mut image = formatter.format(&highlight, theme);
 
     if let Some(text) = opts.watermark.text {
