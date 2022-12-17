@@ -101,7 +101,23 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
     let syntax = ps
         .find_syntax_by_token(ft.as_str().unwrap())
         .ok_or_else(|| api::Error::Other("Could not find syntax for filetype.".to_owned()))?;
-    let theme = &ts.themes[opts.theme.unwrap_or_else(|| "Dracula".to_owned()).as_str()];
+    let theme = match ts.themes.get(
+        opts.theme
+            .clone()
+            .unwrap_or_else(|| "Dracula".to_owned())
+            .as_str(),
+    ) {
+        Some(theme) => theme,
+        _ => {
+            api::err_writeln(&format!(
+                "Could not load '{}' theme.",
+                opts.theme.unwrap_or_default()
+            ));
+            ts.themes
+                .get("Dracula")
+                .ok_or_else(|| api::Error::Other("Error loading dracula theme".to_owned()))?
+        }
+    };
 
     let mut h = HighlightLines::new(syntax, theme);
     let highlight = LinesWithEndings::from(&code)
