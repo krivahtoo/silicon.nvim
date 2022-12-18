@@ -12,7 +12,7 @@ use utils::{parse_str_color, IntoFont, IntoFontStyle};
 use image::DynamicImage;
 use nvim_oxi as oxi;
 use oxi::{
-    api::{self, opts::*, types::*, Buffer},
+    api::{self, opts::*, types::*, Buffer, Error},
     Dictionary, Function,
 };
 use silicon::{
@@ -90,7 +90,7 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
     let ha = HighlightingAssets::new();
     let (ps, ts) = (ha.syntax_set, ha.theme_set);
     if opts.start == 0 || opts.end == 0 {
-        return Err(api::Error::Other(
+        return Err(Error::Other(
             "line1 and line2 are required when calling `capture` directly".to_owned(),
         ))
         .map_err(Into::into);
@@ -102,13 +102,11 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
 
     let syntax = ps
         .find_syntax_by_token(ft.as_str().unwrap())
-        .ok_or_else(|| api::Error::Other("Could not find syntax for filetype.".to_owned()))?;
-    let theme = match ts.themes.get(
-        opts.theme
-            .clone()
-            .unwrap_or_else(|| "Dracula".to_owned())
-            .as_str(),
-    ) {
+        .ok_or_else(|| Error::Other("Could not find syntax for filetype.".to_owned()))?;
+    let theme = match ts
+        .themes
+        .get(&opts.theme.clone().unwrap_or_else(|| "Dracula".to_owned()))
+    {
         Some(theme) => theme,
         _ => {
             api::err_writeln(&format!(
@@ -117,7 +115,7 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
             ));
             ts.themes
                 .get("Dracula")
-                .ok_or_else(|| api::Error::Other("Error loading dracula theme".to_owned()))?
+                .ok_or_else(|| Error::Other("Error loading dracula theme".to_owned()))?
         }
     };
 
@@ -125,25 +123,16 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
     let highlight = LinesWithEndings::from(&code)
         .map(|line| h.highlight_line(line, &ps))
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| api::Error::Other(format!("Error highlighting lines: {}", e)))?;
+        .map_err(|e| Error::Other(format!("Error highlighting lines: {}", e)))?;
 
     let adder = ShadowAdder::default()
         .background(Background::Solid(
-            parse_str_color(
-                opts.background
-                    .unwrap_or_else(|| "#eef".to_owned())
-                    .as_str(),
-            )
-            .unwrap(),
+            parse_str_color(&opts.background.unwrap_or_else(|| "#eef".to_owned()))
+                .map_err(|e| Error::Other(format!("{e}")))?,
         ))
         .shadow_color(
-            parse_str_color(
-                opts.shadow
-                    .color
-                    .unwrap_or_else(|| "#555".to_owned())
-                    .as_str(),
-            )
-            .unwrap(),
+            parse_str_color(&opts.shadow.color.unwrap_or_else(|| "#555".to_owned()))
+                .map_err(|e| Error::Other(format!("{e}")))?,
         )
         .blur_radius(opts.shadow.blur_radius)
         .offset_x(opts.shadow.offset_x)
@@ -163,14 +152,14 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
         .round_corner(opts.round_corner.unwrap_or(true))
         .shadow_adder(adder)
         .build()
-        .map_err(|e| api::Error::Other(format!("font error: {}", e)))?;
+        .map_err(|e| Error::Other(format!("font error: {}", e)))?;
     let mut image = formatter.format(&highlight, theme);
 
     if let Some(text) = opts.watermark.text {
         let font = FontCollection::new(fonts.as_slice()).unwrap();
 
         let (x, y) = (
-            image.to_rgba8().width() - (font.get_text_len(text.as_str()) + font.get_text_len("  ")),
+            image.to_rgba8().width() - (font.get_text_len(&text) + font.get_text_len("  ")),
             image.to_rgba8().height() - (font.get_font_height() * 2),
         );
 
@@ -180,22 +169,20 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
                 .color
                 .unwrap_or_else(|| "#222".to_owned())
                 .to_rgba()
-                .unwrap(),
+                .map_err(|e| Error::Other(format!("{e}")))?,
             x,
             y,
             opts.watermark
                 .style
                 .unwrap_or_else(|| "bold".to_owned())
                 .to_style(),
-            text.as_str(),
+            &text,
         );
     }
 
     if let Some(output) = opts.output {
         match image.save(output.as_path()) {
-            Err(e) => {
-                api::err_writeln(format!("[silicon.nvim]: Failed to save image: {e}").as_str())
-            }
+            Err(e) => api::err_writeln(&format!("[silicon.nvim]: Failed to save image: {e}")),
             Ok(_) => {
                 api::notify(
                     "Image saved to file",
@@ -206,7 +193,7 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
         };
     } else {
         match dump_image_to_clipboard(&image) {
-            Err(e) => api::err_writeln(format!("[silicon.nvim]: {e}").as_str()),
+            Err(e) => api::err_writeln(&format!("[silicon.nvim]: {e}")),
             Ok(_) => {
                 api::notify(
                     "Image saved to clipboard",
@@ -239,7 +226,7 @@ fn setup(cmd_opts: Opts) -> oxi::Result<()> {
             output,
             ..cmd_opts.clone()
         })
-        .ok();
+        .map_err(|e: oxi::Error| Error::Other(format!("{e}")))?;
         Ok(())
     };
     api::create_user_command("Silicon", silicon_cmd, &opts)?;
