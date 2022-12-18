@@ -16,9 +16,10 @@ use oxi::{
     Dictionary, Function,
 };
 use silicon::{
+    assets::HighlightingAssets,
     font::FontCollection,
     formatter::ImageFormatterBuilder,
-    utils::{init_syntect, Background, ShadowAdder, ToRgba},
+    utils::{Background, ShadowAdder, ToRgba},
 };
 use syntect::{easy::HighlightLines, util::LinesWithEndings};
 
@@ -86,7 +87,8 @@ pub fn dump_image_to_clipboard(_image: &DynamicImage) -> anyhow::Result<()> {
 }
 
 fn save_image(opts: Opts) -> oxi::Result<()> {
-    let (ps, ts) = init_syntect();
+    let ha = HighlightingAssets::new();
+    let (ps, ts) = (ha.syntax_set, ha.theme_set);
     if opts.start == 0 || opts.end == 0 {
         return Err(api::Error::Other(
             "line1 and line2 are required when calling `capture` directly".to_owned(),
@@ -121,8 +123,9 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
 
     let mut h = HighlightLines::new(syntax, theme);
     let highlight = LinesWithEndings::from(&code)
-        .map(|line| h.highlight(line, &ps))
-        .collect::<Vec<_>>();
+        .map(|line| h.highlight_line(line, &ps))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| api::Error::Other(format!("Error highlighting lines: {}", e)))?;
 
     let adder = ShadowAdder::default()
         .background(Background::Solid(
