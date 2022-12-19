@@ -95,14 +95,27 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
         ))
         .map_err(Into::into);
     }
-    let code = Buffer::current()
-        .get_lines((opts.start - 1)..=opts.end, false)?
-        .fold(String::new(), |a, b| a + b.to_string().as_str() + "\n");
+
+    let code = api::call_function::<_, Vec<String>>(
+        "getbufline",
+        (
+            api::call_function::<_, i32>("bufnr", ('%',))?, // current buffer
+            opts.start as i32,
+            opts.end as i32,
+        ),
+    )?
+    .iter()
+    .fold(String::new(), |a, b| a + &b.to_string() + "\n");
+
     let ft: oxi::String = Buffer::current().get_option("filetype")?;
 
     let syntax = ps
-        .find_syntax_by_token(ft.as_str().unwrap())
+        .find_syntax_by_token(
+            ft.as_str()
+                .map_err(|e| Error::Other(format!("utf error: {e}")))?,
+        )
         .ok_or_else(|| Error::Other("Could not find syntax for filetype.".to_owned()))?;
+
     let theme = match ts
         .themes
         .get(&opts.theme.clone().unwrap_or_else(|| "Dracula".to_owned()))
