@@ -3,13 +3,14 @@ extern crate anyhow;
 
 mod config;
 mod utils;
+mod clipboard;
 
 use std::path::PathBuf;
 
+use clipboard::dump_image_to_clipboard;
 use config::Opts;
 use utils::{parse_str_color, IntoFont, IntoFontStyle};
 
-use image::DynamicImage;
 use nvim_oxi as oxi;
 use oxi::{
     api::{self, opts::*, types::*, Buffer, Error},
@@ -23,77 +24,13 @@ use silicon::{
 };
 use syntect::{easy::HighlightLines, util::LinesWithEndings};
 
-#[cfg(target_os = "windows")]
-use {
-    clipboard_win::{formats, Clipboard, Setter},
-    image::ImageOutputFormat,
-};
-#[cfg(target_os = "macos")]
-use {image::ImageOutputFormat, pasteboard::Pasteboard};
-#[cfg(target_os = "linux")]
-use {image::ImageOutputFormat, std::process::Command};
-
-#[cfg(target_os = "linux")]
-pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
-    let mut temp = tempfile::NamedTempFile::new()?;
-    image.write_to(&mut temp, ImageOutputFormat::Png)?;
-    Command::new("xclip")
-        .args([
-            "-sel",
-            "clip",
-            "-t",
-            "image/png",
-            temp.path().to_str().unwrap(),
-        ])
-        .status()
-        .map_err(|e| format_err!("Failed to copy image to clipboard: {}", e))?;
-    Ok(())
-}
-
-#[cfg(target_os = "macos")]
-pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
-    let mut temp = tempfile::NamedTempFile::new()?;
-    image.write_to(&mut temp, ImageOutputFormat::Png)?;
-    unsafe {
-        Pasteboard::Image.copy(temp.path().to_str().unwrap());
-    }
-    Ok(())
-}
-
-#[cfg(target_os = "windows")]
-pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
-    let mut temp: Vec<u8> = Vec::new();
-
-    // Convert the image to RGB without alpha because the clipboard
-    // of windows doesn't support it.
-    let image = DynamicImage::ImageRgb8(image.to_rgb());
-
-    image.write_to(&mut temp, ImageOutputFormat::Bmp)?;
-
-    let _clip =
-        Clipboard::new_attempts(10).map_err(|e| format_err!("Couldn't open clipboard: {}", e))?;
-
-    formats::Bitmap
-        .write_clipboard(&temp)
-        .map_err(|e| format_err!("Failed copy image: {}", e))?;
-    Ok(())
-}
-
-#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
-pub fn dump_image_to_clipboard(_image: &DynamicImage) -> anyhow::Result<()> {
-    Err(format_err!(
-        "This feature hasn't been implemented for your system"
-    ))
-}
-
-fn save_image(opts: Opts) -> oxi::Result<()> {
+fn save_image(opts: Opts) -> Result<(), Error> {
     let ha = HighlightingAssets::new();
     let (ps, ts) = (ha.syntax_set, ha.theme_set);
     if opts.start == 0 || opts.end == 0 {
         return Err(Error::Other(
             "line1 and line2 are required when calling `capture` directly".to_owned(),
-        ))
-        .map_err(Into::into);
+        ));
     }
 
     let code = api::call_function::<_, Vec<String>>(
@@ -220,7 +157,7 @@ fn save_image(opts: Opts) -> oxi::Result<()> {
     Ok(())
 }
 
-fn setup(cmd_opts: Opts) -> oxi::Result<()> {
+fn setup(cmd_opts: Opts) -> Result<(), Error> {
     // Create a new `Silicon` command.
     let opts = CreateCommandOpts::builder()
         .range(CommandRange::WholeFile)
@@ -238,8 +175,7 @@ fn setup(cmd_opts: Opts) -> oxi::Result<()> {
             end: args.line2,
             output,
             ..cmd_opts.clone()
-        })
-        .map_err(|e: oxi::Error| Error::Other(format!("{e}")))?;
+        })?;
         Ok(())
     };
     api::create_user_command("Silicon", silicon_cmd, &opts)?;
@@ -253,7 +189,6 @@ fn setup(cmd_opts: Opts) -> oxi::Result<()> {
             .silent(true)
             .build(),
     )
-    .map_err(Into::into)
 }
 
 #[oxi::module]
