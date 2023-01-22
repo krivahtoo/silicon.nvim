@@ -73,10 +73,13 @@ The `setup` function accepts the following table:
 
 ```lua
 {
-  -- The following key is required if you want to save image to file instead of clipboard
-  output = string
   -- The following keys are all optional
   -- with default values
+  -- The following key is required if you want to save image to file instead of clipboard
+  output = string,
+  output_format = "silicon_[year][month][day]_[hour][minute][second].png",
+  output_clipboard = false,
+  output_dir = "",
   font = 'Hack=20',
   theme = 'Dracula',
   background = '#eff',

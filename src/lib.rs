@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate anyhow;
 
+mod clipboard;
 mod config;
 mod utils;
-mod clipboard;
 
 use std::path::PathBuf;
 
@@ -141,7 +141,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
                 )?;
             }
         };
-    } else {
+    } else if opts.output_clipboard.unwrap_or_default() {
         match dump_image_to_clipboard(&image) {
             Err(e) => api::err_writeln(&format!("[silicon.nvim]: {e}")),
             Ok(_) => {
@@ -151,6 +151,31 @@ fn save_image(opts: Opts) -> Result<(), Error> {
                     &NotifyOpts::default(),
                 )?;
             }
+        };
+    } else {
+        match time::format_description::parse(&opts.output_format.unwrap_or_else(|| {
+            String::from("silicon_[year][month][day]_[hour][minute][second].png")
+        })) {
+            Ok(fmt) => {
+                let file = time::OffsetDateTime::now_utc()
+                    .format(&fmt)
+                    .map_err(|e| Error::Other(format!("Error formatting filename: {e}")))?;
+                let mut path = opts.output_dir.unwrap_or_default();
+                path.push(&file);
+                match image.save(path) {
+                    Err(e) => {
+                        api::err_writeln(&format!("[silicon.nvim]: Failed to save image: {e}"))
+                    }
+                    Ok(_) => {
+                        api::notify(
+                            &format!("Image saved to {}", file),
+                            LogLevel::Info,
+                            &NotifyOpts::default(),
+                        )?;
+                    }
+                };
+            }
+            Err(e) => api::err_writeln(&format!("[silicon.nvim]: {e}")),
         };
     }
 
@@ -163,6 +188,7 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
         .range(CommandRange::WholeFile)
         .desc("create a beautiful image of your source code.")
         .nargs(CommandNArgs::ZeroOrOne)
+        .bang(true)
         .build();
 
     let silicon_cmd = move |args: CommandArgs| {
@@ -174,6 +200,7 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
             start: args.line1,
             end: args.line2,
             output,
+            output_clipboard: Some(!args.bang),
             ..cmd_opts.clone()
         })?;
         Ok(())

@@ -52,6 +52,9 @@ pub struct Opts {
     pub window_controls: Option<bool>,
 
     pub output: Option<PathBuf>,
+    pub output_clipboard: Option<bool>,
+    pub output_dir: Option<PathBuf>,
+    pub output_format: Option<String>,
 
     #[serde(default)]
     pub watermark: WatermarkOpts,
