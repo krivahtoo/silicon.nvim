@@ -28,6 +28,14 @@ pub struct ShadowOpts {
     pub color: Option<String>,
 }
 
+#[derive(Clone, Serialize, Deserialize, Default)]
+pub struct OutputOpts {
+    pub file: Option<PathBuf>,
+    pub clipboard: Option<bool>,
+    pub path: Option<PathBuf>,
+    pub format: Option<String>,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Opts {
     pub font: Option<String>,
@@ -51,10 +59,8 @@ pub struct Opts {
     pub round_corner: Option<bool>,
     pub window_controls: Option<bool>,
 
-    pub output: Option<PathBuf>,
-    pub output_clipboard: Option<bool>,
-    pub output_dir: Option<PathBuf>,
-    pub output_format: Option<String>,
+    #[serde(default)]
+    pub output: OutputOpts,
 
     #[serde(default)]
     pub watermark: WatermarkOpts,

@@ -8,7 +8,8 @@ mod utils;
 use std::path::PathBuf;
 
 use clipboard::dump_image_to_clipboard;
-use config::Opts;
+use config::{Opts, OutputOpts};
+use time::{format_description, OffsetDateTime};
 use utils::{parse_str_color, IntoFont, IntoFontStyle};
 
 use nvim_oxi as oxi;
@@ -130,7 +131,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         );
     }
 
-    if let Some(output) = opts.output {
+    if let Some(output) = opts.output.file {
         match image.save(output.as_path()) {
             Err(e) => api::err_writeln(&format!("[silicon.nvim]: Failed to save image: {e}")),
             Ok(_) => {
@@ -141,7 +142,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
                 )?;
             }
         };
-    } else if opts.output_clipboard.unwrap_or_default() {
+    } else if opts.output.clipboard.unwrap_or_default() {
         match dump_image_to_clipboard(&image) {
             Err(e) => api::err_writeln(&format!("[silicon.nvim]: {e}")),
             Ok(_) => {
@@ -153,14 +154,14 @@ fn save_image(opts: Opts) -> Result<(), Error> {
             }
         };
     } else {
-        match time::format_description::parse(&opts.output_format.unwrap_or_else(|| {
+        match format_description::parse(&opts.output.format.unwrap_or_else(|| {
             String::from("silicon_[year][month][day]_[hour][minute][second].png")
         })) {
             Ok(fmt) => {
-                let file = time::OffsetDateTime::now_utc()
+                let file = OffsetDateTime::now_utc()
                     .format(&fmt)
                     .map_err(|e| Error::Other(format!("Error formatting filename: {e}")))?;
-                let mut path = opts.output_dir.unwrap_or_default();
+                let mut path = opts.output.path.unwrap_or_default();
                 path.push(&file);
                 match image.save(path) {
                     Err(e) => {
@@ -192,15 +193,18 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
         .build();
 
     let silicon_cmd = move |args: CommandArgs| {
-        let output = args
+        let file = args
             .args
             .is_some()
             .then(|| PathBuf::from(args.args.unwrap()));
         save_image(Opts {
             start: args.line1,
             end: args.line2,
-            output,
-            output_clipboard: Some(!args.bang),
+            output: OutputOpts {
+                file,
+                clipboard: Some(!args.bang),
+                ..cmd_opts.output.clone()
+            },
             ..cmd_opts.clone()
         })?;
         Ok(())

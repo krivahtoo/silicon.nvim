@@ -62,4 +62,3 @@ pub fn dump_image_to_clipboard(_image: &DynamicImage) -> anyhow::Result<()> {
         "This feature hasn't been implemented for your system"
     ))
 }
-

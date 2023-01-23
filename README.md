@@ -76,10 +76,12 @@ The `setup` function accepts the following table:
   -- The following keys are all optional
   -- with default values
   -- The following key is required if you want to save image to file instead of clipboard
-  output = string,
-  output_format = "silicon_[year][month][day]_[hour][minute][second].png",
-  output_clipboard = false,
-  output_dir = "",
+  output = {
+    file = "", -- full path of the file to save to.
+    clipboard = true,
+    path = ".", -- where to save images e.g. /home/user/Pictures
+    format = "silicon_[year][month][day]_[hour][minute][second].png",
+  },
   font = 'Hack=20',
   theme = 'Dracula',
   background = '#eff',
@@ -110,7 +112,9 @@ The `setup` function accepts the following table:
 Command:
 
 ```bash
-:'<,'>Silicon [file]
+:'<,'>Silicon[!] [file]
 # Defaults to clipboard if [file] is not specified.
+# With bang file is saved to specified output.file in the
+# output.format specified
 # Also mapped to 'SS' in Visual mode
 ```
