@@ -34,16 +34,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         ));
     }
 
-    let code = api::call_function::<_, Vec<String>>(
-        "getbufline",
-        (
-            api::call_function::<_, i32>("bufnr", ('%',))?, // current buffer
-            opts.start as i32,
-            opts.end as i32,
-        ),
-    )?
-    .iter()
-    .fold(String::new(), |a, b| a + &b.to_string() + "\n");
+    let code = get_lines(&opts)?;
 
     let ft: oxi::String = Buffer::current().get_option("filetype")?;
 
@@ -93,17 +84,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
 
     let fonts = opts.font.unwrap_or_else(|| "Hack=20".to_owned()).to_font();
 
-    let mut formatter = ImageFormatterBuilder::new()
-        .font(fonts.clone())
-        .tab_width(opts.tab_width.unwrap_or(4))
-        .line_pad(opts.line_pad.unwrap_or(2))
-        .line_offset(opts.line_offset.unwrap_or(1))
-        .line_number(opts.line_number.unwrap_or(false))
-        .window_controls(opts.window_controls.unwrap_or(true))
-        .round_corner(opts.round_corner.unwrap_or(true))
-        .shadow_adder(adder)
-        .build()
-        .map_err(|e| Error::Other(format!("font error: {}", e)))?;
+    let mut formatter = get_formatter(&fonts, &opts, adder)?;
     let mut image = formatter.format(&highlight, theme);
 
     if let Some(text) = opts.watermark.text {
@@ -181,6 +162,37 @@ fn save_image(opts: Opts) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+fn get_formatter(
+    fonts: &[(String, f32)],
+    opts: &Opts,
+    adder: ShadowAdder,
+) -> Result<silicon::formatter::ImageFormatter, Error> {
+    ImageFormatterBuilder::new()
+        .font(fonts.to_owned())
+        .tab_width(opts.tab_width.unwrap_or(4))
+        .line_pad(opts.line_pad.unwrap_or(2))
+        .line_offset(opts.line_offset.unwrap_or(1))
+        .line_number(opts.line_number.unwrap_or(false))
+        .window_controls(opts.window_controls.unwrap_or(true))
+        .round_corner(opts.round_corner.unwrap_or(true))
+        .shadow_adder(adder)
+        .build()
+        .map_err(|e| Error::Other(format!("font error: {e}")))
+}
+
+fn get_lines(opts: &Opts) -> Result<String, Error> {
+    Ok(api::call_function::<_, Vec<String>>(
+        "getbufline",
+        (
+            api::call_function::<_, i32>("bufnr", ('%',))?,
+            opts.start as i32,
+            opts.end as i32,
+        ),
+    )?
+    .iter()
+    .fold(String::new(), |a, b| a + &b.to_string() + "\n"))
 }
 
 fn setup(cmd_opts: Opts) -> Result<(), Error> {
