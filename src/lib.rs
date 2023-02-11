@@ -53,7 +53,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         _ => {
             api::err_writeln(&format!(
                 "Could not load '{}' theme.",
-                opts.theme.unwrap_or_default()
+                opts.clone().theme.unwrap_or_default()
             ));
             ts.themes
                 .get("Dracula")
@@ -69,12 +69,18 @@ fn save_image(opts: Opts) -> Result<(), Error> {
 
     let adder = ShadowAdder::default()
         .background(Background::Solid(
-            parse_str_color(&opts.background.unwrap_or_else(|| "#eef".to_owned()))
-                .map_err(|e| Error::Other(format!("{e}")))?,
+            parse_str_color(&opts.clone().background.unwrap_or_else(|| "#eef".to_owned()))
+                .map_err(|e| Error::Other(format!("[silicon.nvim]: {e}")))?,
         ))
         .shadow_color(
-            parse_str_color(&opts.shadow.color.unwrap_or_else(|| "#555".to_owned()))
-                .map_err(|e| Error::Other(format!("{e}")))?,
+            parse_str_color(
+                &opts
+                    .clone()
+                    .shadow
+                    .color
+                    .unwrap_or_else(|| "#555".to_owned()),
+            )
+            .map_err(|e| Error::Other(format!("[silicon.nvim]: {e}")))?,
         )
         .blur_radius(opts.shadow.blur_radius)
         .offset_x(opts.shadow.offset_x)
@@ -82,7 +88,11 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         .pad_horiz(opts.pad_horiz.unwrap_or(80))
         .pad_vert(opts.pad_vert.unwrap_or(100));
 
-    let fonts = opts.font.unwrap_or_else(|| "Hack=20".to_owned()).to_font();
+    let fonts = opts
+        .clone()
+        .font
+        .unwrap_or_else(|| "Hack=20".to_owned())
+        .to_font();
 
     let mut formatter = get_formatter(&fonts, &opts, adder)?;
     let mut image = formatter.format(&highlight, theme);
