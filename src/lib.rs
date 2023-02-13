@@ -65,7 +65,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
     let highlight = LinesWithEndings::from(&code)
         .map(|line| h.highlight_line(line, &ps))
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| Error::Other(format!("Error highlighting lines: {}", e)))?;
+        .map_err(|e| Error::Other(format!("Error highlighting lines: {e}")))?;
 
     let adder = ShadowAdder::default()
         .background(Background::Solid(
@@ -98,7 +98,8 @@ fn save_image(opts: Opts) -> Result<(), Error> {
     let mut image = formatter.format(&highlight, theme);
 
     if let Some(text) = opts.watermark.text {
-        let font = FontCollection::new(fonts.as_slice()).unwrap();
+        let font = FontCollection::new(fonts.as_slice())
+            .map_err(|e| Error::Other(format!("[silicon.nvim]: {e}")))?;
 
         let (x, y) = (
             image.to_rgba8().width() - (font.get_text_len(&text) + font.get_text_len("  ")),
@@ -111,7 +112,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
                 .color
                 .unwrap_or_else(|| "#222".to_owned())
                 .to_rgba()
-                .map_err(|e| Error::Other(format!("{e}")))?,
+                .map_err(|e| Error::Other(format!("[silicon.nvim]: {e}")))?,
             x,
             y,
             opts.watermark
@@ -160,7 +161,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
                     }
                     Ok(_) => {
                         api::notify(
-                            &format!("Image saved to {}", file),
+                            &format!("Image saved to {file}"),
                             LogLevel::Info,
                             &NotifyOpts::default(),
                         )?;
