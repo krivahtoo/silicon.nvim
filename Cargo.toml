@@ -33,3 +33,6 @@ image = { version = "0.24", default-features = false, features = ["jpeg", "bmp",
 version = "0.24"
 default-features = false
 features = ["jpeg", "png", "jpeg_rayon"]
+
+[patch.crates-io]
+nvim-oxi = { git = "https://github.com/noib3/nvim-oxi" }
