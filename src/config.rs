@@ -5,7 +5,7 @@ use oxi::{
     conversion::{self, FromObject, ToObject},
     lua,
     serde::{Deserializer, Serializer},
-    Object,
+    Object, Function,
 };
 use serde::{Deserialize, Serialize};
 
@@ -58,6 +58,7 @@ pub struct Opts {
 
     pub round_corner: Option<bool>,
     pub window_controls: Option<bool>,
+    pub window_title: Option<Function<(),String>>,
 
     #[serde(default)]
     pub output: OutputOpts,

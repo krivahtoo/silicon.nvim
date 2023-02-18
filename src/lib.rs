@@ -180,6 +180,14 @@ fn get_formatter(
     opts: &Opts,
     adder: ShadowAdder,
 ) -> Result<silicon::formatter::ImageFormatter, Error> {
+    let title = match opts.window_title.clone() {
+        Some(f) => Some(f.call(()).map_err(|e| {
+            Error::Other(format!(
+                "[silicon.nvim]: Error calling `window_title` function. {e}"
+            ))
+        })?),
+        None => None,
+    };
     ImageFormatterBuilder::new()
         .font(fonts.to_owned())
         .tab_width(opts.tab_width.unwrap_or(4))
@@ -187,6 +195,7 @@ fn get_formatter(
         .line_offset(opts.line_offset.unwrap_or(1))
         .line_number(opts.line_number.unwrap_or(false))
         .window_controls(opts.window_controls.unwrap_or(true))
+        .window_title(title)
         .round_corner(opts.round_corner.unwrap_or(true))
         .shadow_adder(adder)
         .build()

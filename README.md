@@ -99,6 +99,7 @@ The `setup` function accepts the following table:
   tab_width = 4,
   round_corner = true,
   window_controls = true,
+  window_title = nil, -- a function returning window title as a string
   watermark = {
     text = nil, -- add this to enable watermark on the bottom-right.
     color = '#222',

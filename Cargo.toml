@@ -36,3 +36,4 @@ features = ["jpeg", "png", "jpeg_rayon"]
 
 [patch.crates-io]
 nvim-oxi = { git = "https://github.com/noib3/nvim-oxi" }
+silicon = { git = "https://github.com/Aloxaf/silicon" }

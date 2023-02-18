@@ -1423,8 +1423,7 @@ checksum = "24188a676b6ae68c3b2cb3a01be17fbf7240ce009799bb56d5b1409051e78fde"
 [[package]]
 name = "silicon"
 version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edb05b35c00bb05eddcdbcf0d330937cc7daa2492e440f0f3838be29c990ebc1"
+source = "git+https://github.com/Aloxaf/silicon#cf3668c9ee43ebdae608db3f7b3449c588b8411f"
 dependencies = [
  "anyhow",
  "clipboard",
