@@ -108,6 +108,10 @@ The `setup` function accepts the following table:
 }
 ```
 
+### Example
+
+![image](https://user-images.githubusercontent.com/41364823/219902305-6efa37cf-4ee4-4e6b-803b-39c344a56dfe.png)
+
 ## Usage
 
 Command:
