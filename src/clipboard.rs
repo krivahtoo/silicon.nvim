@@ -38,7 +38,7 @@ pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
         let wl_copy_err = wl_copy_cmd.unwrap_err();
         let xclip_err = xclip_cmd.unwrap_err();
         let combined_err = format_err!(
-            "Both wl-copy & xclip failed to copy:\n\twl-copy error:{}\n\txclip error:{}",
+            "Both wl-copy & xclip failed to copy:\nwl-copy error:{}\nxclip error:{}",
             &wl_copy_err.to_string(),
             &xclip_err.to_string()
         );
