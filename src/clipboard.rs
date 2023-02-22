@@ -12,18 +12,25 @@ use {image::ImageOutputFormat, std::process::Command};
 
 #[cfg(target_os = "linux")]
 pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
+    use std::{process::Stdio, io::Write};
+
     let mut temp = tempfile::NamedTempFile::new()?;
     image.write_to(&mut temp, ImageOutputFormat::Png)?;
-    Command::new("xclip")
+    let mut cmd = Command::new("wl-copy")
         .args([
-            "-sel",
-            "clip",
             "-t",
             "image/png",
-            temp.path().to_str().unwrap(),
         ])
-        .status()
+        .stdin(Stdio::piped())
+        .spawn()
         .map_err(|e| format_err!("Failed to copy image to clipboard: {}", e))?;
+
+    // NOTE: We get to do all this reading and writing from the files because wl-copy only accepts
+    // files on STDIN
+    let mut stdin = cmd.stdin.take().expect("Failed to open stdin");
+    let temp_file_path = temp.path().to_str().unwrap();
+    let file_content = std::fs::read(temp_file_path).expect(&format!("Unable to open {}!", temp_file_path));
+    stdin.write_all(&file_content[..]).expect("Unable to write stdin!");
     Ok(())
 }
 
