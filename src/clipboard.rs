@@ -12,25 +12,50 @@ use {image::ImageOutputFormat, std::process::Command};
 
 #[cfg(target_os = "linux")]
 pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
-    use std::{process::Stdio, io::Write};
+    use std::{io::Write, process::Stdio};
 
     let mut temp = tempfile::NamedTempFile::new()?;
     image.write_to(&mut temp, ImageOutputFormat::Png)?;
-    let mut cmd = Command::new("wl-copy")
+
+    let xclip_cmd = Command::new("xclip")
         .args([
+            "-sel",
+            "clip",
             "-t",
             "image/png",
+            temp.path().to_str().unwrap(),
         ])
+        .status()
+        .map_err(|e| format_err!("Failed to copy image to clipboard: {}", e));
+
+    let wl_copy_cmd = Command::new("wl-copy")
+        .args(["-t", "image/png"])
         .stdin(Stdio::piped())
         .spawn()
-        .map_err(|e| format_err!("Failed to copy image to clipboard: {}", e))?;
+        .map_err(|e| format_err!("Failed to copy image to clipboard: {}", e));
 
-    // NOTE: We get to do all this reading and writing from the files because wl-copy only accepts
-    // files on STDIN
-    let mut stdin = cmd.stdin.take().expect("Failed to open stdin");
-    let temp_file_path = temp.path().to_str().unwrap();
-    let file_content = std::fs::read(temp_file_path).expect(&format!("Unable to open {}!", temp_file_path));
-    stdin.write_all(&file_content[..]).expect("Unable to write stdin!");
+    if wl_copy_cmd.is_err() && xclip_cmd.is_err() {
+        let wl_copy_err = wl_copy_cmd.unwrap_err();
+        let xclip_err = xclip_cmd.unwrap_err();
+        let combined_err = format_err!(
+            "Both wl-copy & xclip failed to copy:\n\twl-copy error:{}\n\txclip error:{}",
+            &wl_copy_err.to_string(),
+            &xclip_err.to_string()
+        );
+        return Err(combined_err);
+    }
+
+    if wl_copy_cmd.is_ok() {
+        // NOTE: We get to do all this reading and writing from the files because wl-copy only accepts
+        // files on STDIN
+        let mut stdin = wl_copy_cmd?.stdin.take().expect("Failed to open stdin");
+        let temp_file_path = temp.path().to_str().unwrap();
+        let file_content =
+            std::fs::read(temp_file_path).map_err(|e| format_err!("Unable to open {}, error: {}", temp_file_path, e))?;
+        stdin
+            .write_all(&file_content[..])
+            .map_err(|e| format_err!("Unable to write to stdin of wl-copy, error: {}", e))?;
+    }
     Ok(())
 }
 
