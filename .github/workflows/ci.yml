@@ -93,6 +93,9 @@ jobs:
           neovim: true
           version: stable
 
+      - name: Install missing dependencies
+        run: brew install pkg-config
+
       - name: build
         run: cargo build && mv target/debug/libsilicon.dylib lua/silicon.so
 
