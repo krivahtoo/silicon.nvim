@@ -94,6 +94,9 @@ jobs:
           default: true
           override: true
 
+      - name: Install missing dependencies
+        run: brew install pkg-config
+
       - name: build
         run: cargo build --all --release && mv target/release/libsilicon.dylib lua/silicon.so
 
@@ -129,6 +132,9 @@ jobs:
           target: aarch64-apple-darwin
           default: true
           override: true
+
+      - name: Install missing dependencies
+        run: brew install pkg-config
 
       - name: build
         run: cargo build --all --release --target aarch64-apple-darwin && mv target/aarch64-apple-darwin/release/libsilicon.dylib lua/silicon.so
