@@ -14,7 +14,7 @@ use utils::{parse_str_color, IntoFont, IntoFontStyle};
 
 use nvim_oxi as oxi;
 use oxi::{
-    api::{self, opts::*, types::*, Buffer, Error},
+    api::{self, opts::*, types::*, Error},
     Dictionary, Function,
 };
 use silicon::{
