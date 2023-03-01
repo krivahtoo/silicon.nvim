@@ -39,12 +39,11 @@ fn save_image(opts: Opts) -> Result<(), Error> {
     // HACK: This allows us to avoid currently broken oxi APIs to get the filetype option.
     // Instead we call into VimL and get the value that way -- super ghetto, but it works without
     // any breaking changes from what I can tell.
-    let ft = oxi::api::exec("echo &filetype", true)?.ok_or_else(|| Error::Other(String::from("Unable to determine filetype!")))?;
+    let ft = oxi::api::exec("echo &filetype", true)?
+        .ok_or_else(|| Error::Other(String::from("Unable to determine filetype!")))?;
 
     let syntax = ps
-        .find_syntax_by_token(
-            &ft
-        )
+        .find_syntax_by_token(&ft)
         .ok_or_else(|| Error::Other("Could not find syntax for filetype.".to_owned()))?;
 
     let theme = match ts

@@ -19,13 +19,7 @@ pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
     let temp_file_path = temp.path().to_str().unwrap();
 
     let xclip_cmd = Command::new("xclip")
-        .args([
-            "-sel",
-            "clip",
-            "-t",
-            "image/png",
-            temp_file_path,
-        ])
+        .args(["-sel", "clip", "-t", "image/png", temp_file_path])
         .status()
         .map_err(|e| format_err!("Failed to copy image to clipboard: {}", e));
 
