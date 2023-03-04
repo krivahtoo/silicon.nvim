@@ -20,14 +20,12 @@ pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
 
     let xclip_cmd = Command::new("xclip")
         .args(["-sel", "clip", "-t", "image/png", temp_file_path])
-        .status()
-        .map_err(|e| format_err!("Failed to copy image to clipboard: {}", e));
+        .status();
 
     let wl_copy_cmd = Command::new("wl-copy")
         .args(["-t", "image/png"])
         .stdin(Stdio::piped())
-        .spawn()
-        .map_err(|e| format_err!("Failed to copy image to clipboard: {}", e));
+        .spawn();
 
     match (wl_copy_cmd, xclip_cmd) {
         (Err(wl_copy_err), Err(xclip_err)) => {
