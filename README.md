@@ -97,6 +97,7 @@ The `setup` function accepts the following table:
   line_pad = 2,
   line_offset = 1,
   tab_width = 4,
+  gobble = false, -- trim extra identation.
   round_corner = true,
   window_controls = true,
   window_title = nil, -- a function returning window title as a string

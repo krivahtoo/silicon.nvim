@@ -34,7 +34,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         ));
     }
 
-    let code = get_lines(&opts)?;
+    let code = utils::get_lines(&opts)?;
 
     // HACK: This allows us to avoid currently broken oxi APIs to get the filetype option.
     // Instead we call into VimL and get the value that way -- super ghetto, but it works without
@@ -201,19 +201,6 @@ fn get_formatter(
         .shadow_adder(adder)
         .build()
         .map_err(|e| Error::Other(format!("font error: {e}")))
-}
-
-fn get_lines(opts: &Opts) -> Result<String, Error> {
-    Ok(api::call_function::<_, Vec<String>>(
-        "getbufline",
-        (
-            api::call_function::<_, i32>("bufnr", ('%',))?,
-            opts.start as i32,
-            opts.end as i32,
-        ),
-    )?
-    .iter()
-    .fold(String::new(), |a, b| a + &b.to_string() + "\n"))
 }
 
 fn setup(cmd_opts: Opts) -> Result<(), Error> {

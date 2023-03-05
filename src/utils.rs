@@ -1,5 +1,8 @@
 use image::Rgba;
 use silicon::{font::FontStyle, utils::ToRgba};
+use nvim_oxi::api::{self, Error};
+
+use super::config::Opts;
 
 pub trait IntoFont {
     fn to_font(self) -> Vec<(String, f32)>;
@@ -45,4 +48,38 @@ impl IntoFontStyle for &str {
 pub fn parse_str_color(s: &str) -> anyhow::Result<Rgba<u8>, anyhow::Error> {
     s.to_rgba()
         .map_err(|_| format_err!("Invalid color: `{}`", s))
+}
+
+pub fn get_lines(opts: &Opts) -> Result<String, Error> {
+    let mut gobble_len: Option<usize> = None;
+    Ok(api::call_function::<_, Vec<String>>(
+        "getbufline",
+        (
+            api::call_function::<_, i32>("bufnr", ('%',))?,
+            opts.start as i32,
+            opts.end as i32,
+        ),
+    )?
+    .iter()
+    .map(|s| match (gobble_len, opts.gobble.unwrap_or_default()) {
+        (Some(len), true) => s.chars().skip(len).collect(),
+        (None, true) => {
+            let line = s.clone();
+            gobble_len = Some(get_globble_len(&line));
+            s.chars().skip(gobble_len.unwrap()).collect::<String>()
+        },
+        (_, false) => s.clone()
+    })
+    .fold(String::new(), |a, b| a + &b + "\n"))
+}
+
+fn get_globble_len(line: &str) -> usize {
+    let mut len: usize = 0;
+    for (ch, i) in line.chars().zip(0..) {
+        if ch != ' ' {
+            len = i;
+            break;
+        }
+    }
+    len
 }
