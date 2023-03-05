@@ -55,6 +55,7 @@ pub struct Opts {
     pub line_offset: Option<u32>,
 
     pub tab_width: Option<u8>,
+    pub gobble: Option<bool>,
 
     pub round_corner: Option<bool>,
     pub window_controls: Option<bool>,
