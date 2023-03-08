@@ -98,6 +98,7 @@ The `setup` function accepts the following table:
   line_offset = 1,
   tab_width = 4,
   gobble = false, -- trim extra identation.
+  highlight_selection = false, -- capture the whole file and highlight selected lines
   round_corner = true,
   window_controls = true,
   window_title = nil, -- a function returning window title as a string
