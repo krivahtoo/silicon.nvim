@@ -56,8 +56,16 @@ pub fn get_lines(opts: &Opts) -> Result<String, Error> {
         "getbufline",
         (
             api::call_function::<_, i32>("bufnr", ('%',))?,
-            opts.start as i32,
-            opts.end as i32,
+            if opts.highlight_selection.unwrap_or_default() {
+                1
+            } else {
+                opts.start as i32
+            },
+            if opts.highlight_selection.unwrap_or_default() {
+                "$".to_owned()
+            } else {
+                format!("{}", opts.end)
+            },
         ),
     )?
     .iter()

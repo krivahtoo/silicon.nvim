@@ -199,6 +199,15 @@ fn get_formatter(
         .window_title(title)
         .round_corner(opts.round_corner.unwrap_or(true))
         .shadow_adder(adder)
+        .highlight_lines(if opts.highlight_selection.unwrap_or_default() {
+            let mut range = vec![];
+            for x in opts.start..=opts.end {
+                range.push(x as u32);
+            }
+            range
+        } else {
+            vec![]
+        })
         .build()
         .map_err(|e| Error::Other(format!("font error: {e}")))
 }

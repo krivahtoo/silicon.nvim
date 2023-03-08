@@ -67,6 +67,8 @@ pub struct Opts {
     #[serde(default)]
     pub watermark: WatermarkOpts,
 
+    pub highlight_selection: Option<bool>,
+
     #[serde(alias = "line1")]
     #[serde(default)]
     pub start: usize,
