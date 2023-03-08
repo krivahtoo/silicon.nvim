@@ -20,7 +20,7 @@ use oxi::{
 use silicon::{
     assets::HighlightingAssets,
     font::FontCollection,
-    formatter::ImageFormatterBuilder,
+    formatter::{ImageFormatter, ImageFormatterBuilder},
     utils::{Background, ShadowAdder, ToRgba},
 };
 use syntect::{easy::HighlightLines, util::LinesWithEndings};
@@ -180,7 +180,7 @@ fn get_formatter(
     fonts: &[(String, f32)],
     opts: &Opts,
     adder: ShadowAdder,
-) -> Result<silicon::formatter::ImageFormatter, Error> {
+) -> Result<ImageFormatter, Error> {
     let title = match opts.window_title.clone() {
         Some(f) => Some(f.call(()).map_err(|e| {
             Error::Other(format!(

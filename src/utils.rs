@@ -1,6 +1,6 @@
 use image::Rgba;
-use silicon::{font::FontStyle, utils::ToRgba};
 use nvim_oxi::api::{self, Error};
+use silicon::{font::FontStyle, utils::ToRgba};
 
 use super::config::Opts;
 
@@ -75,8 +75,8 @@ pub fn get_lines(opts: &Opts) -> Result<String, Error> {
             let line = s.clone();
             gobble_len = Some(get_globble_len(&line));
             s.chars().skip(gobble_len.unwrap()).collect::<String>()
-        },
-        (_, false) => s.clone()
+        }
+        (_, false) => s.clone(),
     })
     .fold(String::new(), |a, b| a + &b + "\n"))
 }
