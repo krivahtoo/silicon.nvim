@@ -129,7 +129,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
             Err(e) => api::err_writeln(&format!("[silicon.nvim]: Failed to save image: {e}")),
             Ok(_) => {
                 api::notify(
-                    "Image saved to file",
+                    &format!("Image saved to {}", output.to_str().unwrap_or_default()),
                     LogLevel::Info,
                     &NotifyOpts::default(),
                 )?;
