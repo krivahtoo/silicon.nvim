@@ -7,6 +7,7 @@ on:
 
 jobs:
   vimdocgen:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v2
@@ -16,5 +17,7 @@ jobs:
           vimdoc: silicon
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Auto generate docs"
-          branch: ${{ github.head_ref }}
+          commit_message: 'chore(docs): auto generate vimdoc'
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
