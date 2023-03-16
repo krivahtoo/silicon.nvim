@@ -10,11 +10,11 @@ Render beautiful image of your code in neovim using [silicon](https://github.com
 
 </div>
 
-
+<!-- panvimdoc-ignore-start -->
 
 https://user-images.githubusercontent.com/41364823/208242473-a65d0a0e-37a9-47f1-a4c2-fdc4da2f50ea.mp4
 
-
+<!-- panvimdoc-ignore-end -->
 
 ## Installation
 
@@ -127,7 +127,31 @@ The `setup` function accepts the following table:
 
 ### Example
 
+```lua
+require('silicon').setup {
+  font = 'FantasqueSansMono Nerd Font=26',
+  background = '#87f',
+  theme = 'Monokai Extended',
+  line_number = true,
+  pad_vert = 80,
+  pad_horiz = 50,
+  output = {
+    path = "/home/krivah/Pictures/Screenshots"
+  },
+  watermark = {
+    text = ' @krivahtoo',
+  },
+  window_title = function()
+    return vim.fn.fnamemodify(vim.fn.bufname(vim.fn.bufnr()), ':~:.')
+  end,
+}
+```
+
+<!-- panvimdoc-ignore-start -->
+
 ![image](https://user-images.githubusercontent.com/41364823/219902305-6efa37cf-4ee4-4e6b-803b-39c344a56dfe.png)
+
+<!-- panvimdoc-ignore-end -->
 
 ## Usage
 
