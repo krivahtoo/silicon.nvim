@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    path:
+      - "README.md"
+  workflow_dispatch:
 
 jobs:
   vimdocgen:
