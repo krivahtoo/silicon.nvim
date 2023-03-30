@@ -774,7 +774,7 @@ dependencies = [
 [[package]]
 name = "luajit-bindings"
 version = "0.2.0"
-source = "git+https://github.com/noib3/nvim-oxi#dd971c59ea390644cd1576bfc6c070d76de6d1bb"
+source = "git+https://github.com/noib3/nvim-oxi#e40be734409f7ced53eb98d26a03ed4e5934813c"
 dependencies = [
  "once_cell",
  "thiserror",
@@ -938,7 +938,7 @@ dependencies = [
 [[package]]
 name = "nvim-api"
 version = "0.2.0"
-source = "git+https://github.com/noib3/nvim-oxi#dd971c59ea390644cd1576bfc6c070d76de6d1bb"
+source = "git+https://github.com/noib3/nvim-oxi#e40be734409f7ced53eb98d26a03ed4e5934813c"
 dependencies = [
  "derive_builder",
  "luajit-bindings",
@@ -951,7 +951,7 @@ dependencies = [
 [[package]]
 name = "nvim-oxi"
 version = "0.2.2"
-source = "git+https://github.com/noib3/nvim-oxi#dd971c59ea390644cd1576bfc6c070d76de6d1bb"
+source = "git+https://github.com/noib3/nvim-oxi#e40be734409f7ced53eb98d26a03ed4e5934813c"
 dependencies = [
  "luajit-bindings",
  "nvim-api",
@@ -963,7 +963,7 @@ dependencies = [
 [[package]]
 name = "nvim-types"
 version = "0.2.0"
-source = "git+https://github.com/noib3/nvim-oxi#dd971c59ea390644cd1576bfc6c070d76de6d1bb"
+source = "git+https://github.com/noib3/nvim-oxi#e40be734409f7ced53eb98d26a03ed4e5934813c"
 dependencies = [
  "luajit-bindings",
  "serde",
@@ -1050,7 +1050,7 @@ dependencies = [
 [[package]]
 name = "oxi-module"
 version = "0.2.0"
-source = "git+https://github.com/noib3/nvim-oxi#dd971c59ea390644cd1576bfc6c070d76de6d1bb"
+source = "git+https://github.com/noib3/nvim-oxi#e40be734409f7ced53eb98d26a03ed4e5934813c"
 dependencies = [
  "proc-macro2",
  "quote",
