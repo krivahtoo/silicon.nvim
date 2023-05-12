@@ -1,3 +1,4 @@
+use anyhow::format_err;
 use image::DynamicImage;
 
 #[cfg(target_os = "windows")]

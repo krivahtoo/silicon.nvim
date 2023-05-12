@@ -1,20 +1,9 @@
-#[macro_use]
-extern crate anyhow;
-
-mod clipboard;
-mod config;
-mod utils;
-
-use std::path::PathBuf;
-
 use clipboard::dump_image_to_clipboard;
 use config::{Opts, OutputOpts};
-use time::{format_description, OffsetDateTime};
-use utils::{parse_str_color, IntoFont, IntoFontStyle};
-
+use error::Error;
 use nvim_oxi as oxi;
 use oxi::{
-    api::{self, opts::*, types::*, Error},
+    api::{self, opts::*, types::*},
     Dictionary, Function,
 };
 use silicon::{
@@ -23,13 +12,21 @@ use silicon::{
     formatter::{ImageFormatter, ImageFormatterBuilder},
     utils::{Background, ShadowAdder, ToRgba},
 };
+use std::path::PathBuf;
 use syntect::{easy::HighlightLines, util::LinesWithEndings};
+use time::{format_description, OffsetDateTime};
+use utils::{parse_str_color, IntoFont, IntoFontStyle};
+
+mod clipboard;
+mod config;
+mod error;
+mod utils;
 
 fn save_image(opts: Opts) -> Result<(), Error> {
     let ha = HighlightingAssets::new();
     let (ps, ts) = (ha.syntax_set, ha.theme_set);
     if opts.start == 0 || opts.end == 0 {
-        return Err(Error::Other(
+        return Err(Error::Generic(
             "line1 and line2 are required when calling `capture` directly".to_owned(),
         ));
     }
@@ -40,11 +37,11 @@ fn save_image(opts: Opts) -> Result<(), Error> {
     // Instead we call into VimL and get the value that way -- super ghetto, but it works without
     // any breaking changes from what I can tell.
     let ft = oxi::api::exec("echo &filetype", true)?
-        .ok_or_else(|| Error::Other(String::from("Unable to determine filetype!")))?;
+        .ok_or_else(|| Error::Generic(String::from("Unable to determine filetype!")))?;
 
     let syntax = ps
         .find_syntax_by_token(&ft)
-        .ok_or_else(|| Error::Other("Could not find syntax for filetype.".to_owned()))?;
+        .ok_or_else(|| Error::Generic("Could not find syntax for filetype.".to_owned()))?;
 
     let theme = match ts
         .themes
@@ -58,31 +55,26 @@ fn save_image(opts: Opts) -> Result<(), Error> {
             ));
             ts.themes
                 .get("Dracula")
-                .ok_or_else(|| Error::Other("Error loading dracula theme".to_owned()))?
+                .ok_or_else(|| Error::Generic("Error loading dracula theme".to_owned()))?
         }
     };
 
     let mut h = HighlightLines::new(syntax, theme);
     let highlight = LinesWithEndings::from(&code)
         .map(|line| h.highlight_line(line, &ps))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| Error::Other(format!("Error highlighting lines: {e}")))?;
+        .collect::<Result<Vec<_>, _>>()?;
 
     let adder = ShadowAdder::default()
-        .background(Background::Solid(
-            parse_str_color(&opts.clone().background.unwrap_or_else(|| "#eef".to_owned()))
-                .map_err(|e| Error::Other(format!("[silicon.nvim]: {e}")))?,
-        ))
-        .shadow_color(
-            parse_str_color(
-                &opts
-                    .clone()
-                    .shadow
-                    .color
-                    .unwrap_or_else(|| "#555".to_owned()),
-            )
-            .map_err(|e| Error::Other(format!("[silicon.nvim]: {e}")))?,
-        )
+        .background(Background::Solid(parse_str_color(
+            &opts.clone().background.unwrap_or_else(|| "#eef".to_owned()),
+        )?))
+        .shadow_color(parse_str_color(
+            &opts
+                .clone()
+                .shadow
+                .color
+                .unwrap_or_else(|| "#555".to_owned()),
+        )?)
         .blur_radius(opts.shadow.blur_radius)
         .offset_x(opts.shadow.offset_x)
         .offset_y(opts.shadow.offset_y)
@@ -99,8 +91,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
     let mut image = formatter.format(&highlight, theme);
 
     if let Some(text) = opts.watermark.text {
-        let font = FontCollection::new(fonts.as_slice())
-            .map_err(|e| Error::Other(format!("[silicon.nvim]: {e}")))?;
+        let font = FontCollection::new(fonts.as_slice())?;
 
         let (x, y) = (
             image.to_rgba8().width() - (font.get_text_len(&text) + font.get_text_len("  ")),
@@ -112,8 +103,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
             opts.watermark
                 .color
                 .unwrap_or_else(|| "#222".to_owned())
-                .to_rgba()
-                .map_err(|e| Error::Other(format!("[silicon.nvim]: {e}")))?,
+                .to_rgba()?,
             x,
             y,
             opts.watermark
@@ -147,29 +137,21 @@ fn save_image(opts: Opts) -> Result<(), Error> {
             }
         };
     } else {
-        match format_description::parse(&opts.output.format.unwrap_or_else(|| {
+        let format = opts.output.format.unwrap_or_else(|| {
             String::from("silicon_[year][month][day]_[hour][minute][second].png")
-        })) {
-            Ok(fmt) => {
-                let file = OffsetDateTime::now_utc()
-                    .format(&fmt)
-                    .map_err(|e| Error::Other(format!("Error formatting filename: {e}")))?;
-                let mut path = opts.output.path.unwrap_or_default();
-                path.push(&file);
-                match image.save(path) {
-                    Err(e) => {
-                        api::err_writeln(&format!("[silicon.nvim]: Failed to save image: {e}"))
-                    }
-                    Ok(_) => {
-                        api::notify(
-                            &format!("Image saved to {file}"),
-                            LogLevel::Info,
-                            &NotifyOpts::default(),
-                        )?;
-                    }
-                };
+        });
+        let file = OffsetDateTime::now_utc().format(&format_description::parse(&format)?)?;
+        let mut path = opts.output.path.unwrap_or_default();
+        path.push(&file);
+        match image.save(path) {
+            Err(e) => api::err_writeln(&format!("[silicon.nvim]: Failed to save image: {e}")),
+            Ok(_) => {
+                api::notify(
+                    &format!("Image saved to {file}"),
+                    LogLevel::Info,
+                    &NotifyOpts::default(),
+                )?;
             }
-            Err(e) => api::err_writeln(&format!("[silicon.nvim]: {e}")),
         };
     }
 
@@ -182,11 +164,7 @@ fn get_formatter(
     adder: ShadowAdder,
 ) -> Result<ImageFormatter, Error> {
     let title = match opts.window_title.clone() {
-        Some(f) => Some(f.call(()).map_err(|e| {
-            Error::Other(format!(
-                "[silicon.nvim]: Error calling `window_title` function. {e}"
-            ))
-        })?),
+        Some(f) => Some(f.call(())?),
         None => None,
     };
     ImageFormatterBuilder::new()
@@ -209,7 +187,7 @@ fn get_formatter(
             vec![]
         })
         .build()
-        .map_err(|e| Error::Other(format!("font error: {e}")))
+        .map_err(|e| e.into())
 }
 
 fn setup(cmd_opts: Opts) -> Result<(), Error> {
@@ -235,7 +213,8 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
                 ..cmd_opts.output.clone()
             },
             ..cmd_opts.clone()
-        })?;
+        })
+        .map_err(|e| api::Error::Other(format!("{e}")))?;
         Ok(())
     };
     api::create_user_command("Silicon", silicon_cmd, &opts)?;
@@ -248,7 +227,8 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
             .desc("Save image of code")
             .silent(true)
             .build(),
-    )
+    )?;
+    Ok(())
 }
 
 #[oxi::module]

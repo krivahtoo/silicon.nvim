@@ -1,7 +1,8 @@
 use image::Rgba;
-use nvim_oxi::api::{self, Error};
+use nvim_oxi::api;
 use silicon::{font::FontStyle, utils::ToRgba};
 
+use super::error::Error;
 use super::config::Opts;
 
 pub trait IntoFont {
@@ -45,9 +46,8 @@ impl IntoFontStyle for &str {
     }
 }
 
-pub fn parse_str_color(s: &str) -> anyhow::Result<Rgba<u8>, anyhow::Error> {
-    s.to_rgba()
-        .map_err(|_| format_err!("Invalid color: `{}`", s))
+pub fn parse_str_color(s: &str) -> Result<Rgba<u8>, Error> {
+    Ok(s.to_rgba()?)
 }
 
 pub fn get_lines(opts: &Opts) -> Result<String, Error> {
