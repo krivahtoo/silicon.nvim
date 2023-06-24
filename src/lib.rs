@@ -4,7 +4,7 @@ use error::Error;
 use nvim_oxi as oxi;
 use oxi::{
     api::{self, opts::*, types::*},
-    Dictionary, Function,
+    Dictionary, Function, Object
 };
 use silicon::{
     assets::HighlightingAssets,
@@ -115,27 +115,19 @@ fn save_image(opts: Opts) -> Result<(), Error> {
     }
 
     if let Some(output) = opts.output.file {
-        match image.save(output.as_path()) {
-            Err(e) => api::err_writeln(&format!("[silicon.nvim]: Failed to save image: {e}")),
-            Ok(_) => {
-                api::notify(
-                    &format!("Image saved to {}", output.to_str().unwrap_or_default()),
-                    LogLevel::Info,
-                    &NotifyOpts::default(),
-                )?;
-            }
-        };
+        image.save(output.as_path())?;
+        api::notify(
+            &format!("Image saved to {}", output.to_str().unwrap_or_default()),
+            LogLevel::Info,
+            &NotifyOpts::default(),
+        )?;
     } else if opts.output.clipboard.unwrap_or_default() {
-        match dump_image_to_clipboard(&image) {
-            Err(e) => api::err_writeln(&format!("[silicon.nvim]: {e}")),
-            Ok(_) => {
-                api::notify(
-                    "Image saved to clipboard",
-                    LogLevel::Info,
-                    &NotifyOpts::default(),
-                )?;
-            }
-        };
+        dump_image_to_clipboard(&image)?;
+        api::notify(
+            "Image saved to clipboard",
+            LogLevel::Info,
+            &NotifyOpts::default(),
+        )?;
     } else {
         let format = opts.output.format.unwrap_or_else(|| {
             String::from("silicon_[year][month][day]_[hour][minute][second].png")
@@ -143,16 +135,12 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         let file = OffsetDateTime::now_utc().format(&format_description::parse(&format)?)?;
         let mut path = opts.output.path.unwrap_or_default();
         path.push(&file);
-        match image.save(path) {
-            Err(e) => api::err_writeln(&format!("[silicon.nvim]: Failed to save image: {e}")),
-            Ok(_) => {
-                api::notify(
-                    &format!("Image saved to {file}"),
-                    LogLevel::Info,
-                    &NotifyOpts::default(),
-                )?;
-            }
-        };
+        image.save(path)?;
+        api::notify(
+            &format!("Image saved to {file}"),
+            LogLevel::Info,
+            &NotifyOpts::default(),
+        )?;
     }
 
     Ok(())
@@ -234,7 +222,8 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
 #[oxi::module]
 fn silicon() -> oxi::Result<Dictionary> {
     Ok(Dictionary::from_iter([
-        ("capture", Function::from_fn(save_image)),
-        ("setup", Function::from_fn(setup)),
+        ("capture", Object::from(Function::from_fn(save_image))),
+        ("setup", Object::from(Function::from_fn(setup))),
+        ("version", Object::from(env!("SILICON_VERSION")))
     ]))
 }

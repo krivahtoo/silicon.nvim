@@ -20,7 +20,7 @@ https://user-images.githubusercontent.com/41364823/208242473-a65d0a0e-37a9-47f1-
 
 ### Requirements
 
-- nvim `v0.7`
+- nvim `v0.9`
 - **[Optional]** cargo and rust toolchain
 
 #### Packer

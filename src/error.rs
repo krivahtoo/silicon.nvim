@@ -12,5 +12,6 @@ pub enum Error {
     Color(#[from] silicon::error::ParseColorError),
     Format(#[from] time::error::Format),
     Parse(#[from] time::error::InvalidFormatDescription),
-    Lua(#[from] nvim_oxi::lua::Error)
+    Lua(#[from] nvim_oxi::lua::Error),
+    Image(#[from] image::ImageError),
 }
