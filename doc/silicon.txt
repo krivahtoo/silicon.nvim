@@ -1,4 +1,4 @@
-*silicon.txt*             For NVIM v0.8.0             Last change: 2023 May 12
+*silicon.txt*             For NVIM v0.8.0            Last change: 2023 June 24
 
 ==============================================================================
 Table of Contents                                  *silicon-table-of-contents*
@@ -13,7 +13,7 @@ INSTALLATION                                            *silicon-installation*
 
 REQUIREMENTS ~
 
-- nvim `v0.7`
+- nvim `v0.9`
 - **[Optional]** cargo and rust toolchain
 
 
