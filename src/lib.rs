@@ -4,7 +4,7 @@ use error::Error;
 use nvim_oxi as oxi;
 use oxi::{
     api::{self, opts::*, types::*},
-    Dictionary, Function, Object
+    Dictionary, Function, Object,
 };
 use silicon::{
     assets::HighlightingAssets,
@@ -155,7 +155,7 @@ fn get_formatter(
         Some(f) => Some(f.call(())?),
         None => None,
     };
-    ImageFormatterBuilder::new()
+    Ok(ImageFormatterBuilder::new()
         .font(fonts.to_owned())
         .tab_width(opts.tab_width.unwrap_or(4))
         .line_pad(opts.line_pad.unwrap_or(2))
@@ -174,8 +174,7 @@ fn get_formatter(
         } else {
             vec![]
         })
-        .build()
-        .map_err(|e| e.into())
+        .build()?)
 }
 
 fn setup(cmd_opts: Opts) -> Result<(), Error> {
@@ -224,6 +223,9 @@ fn silicon() -> oxi::Result<Dictionary> {
     Ok(Dictionary::from_iter([
         ("capture", Object::from(Function::from_fn(save_image))),
         ("setup", Object::from(Function::from_fn(setup))),
-        ("version", Object::from(env!("SILICON_VERSION")))
+        (
+            "version",
+            Object::from(option_env!("SILICON_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))),
+        ),
     ]))
 }
