@@ -196,7 +196,10 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
             end: args.line2,
             output: OutputOpts {
                 file,
-                clipboard: Some(!args.bang),
+                clipboard: match cmd_opts.output.clipboard.is_none() {
+                    true => Some(!args.bang),
+                    false => cmd_opts.output.clipboard,
+                },
                 ..cmd_opts.output.clone()
             },
             ..cmd_opts.clone()
