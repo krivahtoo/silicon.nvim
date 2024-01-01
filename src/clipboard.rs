@@ -1,5 +1,6 @@
 use anyhow::format_err;
 use image::DynamicImage;
+use std::io::Cursor;
 
 #[cfg(target_os = "windows")]
 use {
@@ -70,9 +71,9 @@ pub fn dump_image_to_clipboard(image: &DynamicImage) -> anyhow::Result<()> {
 
     // Convert the image to RGB without alpha because the clipboard
     // of windows doesn't support it.
-    let image = DynamicImage::ImageRgb8(image.to_rgb());
+    let image = DynamicImage::ImageRgb8(image.to_rgb8());
 
-    image.write_to(&mut temp, ImageOutputFormat::Bmp)?;
+    image.write_to(&mut Cursor::new(&mut temp), ImageOutputFormat::Bmp)?;
 
     let _clip =
         Clipboard::new_attempts(10).map_err(|e| format_err!("Couldn't open clipboard: {}", e))?;
