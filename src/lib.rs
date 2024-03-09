@@ -25,7 +25,7 @@ mod utils;
 fn save_image(opts: Opts) -> Result<(), Error> {
     let ha = HighlightingAssets::new();
     let (ps, ts) = (ha.syntax_set, ha.theme_set);
-    if opts.start == 0 || opts.end == 0 {
+    if opts.start == 0 && opts.end == 0 {
         return Err(Error::Generic(
             "line1 and line2 are required when calling `capture` directly".to_owned(),
         ));
@@ -204,10 +204,11 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
             },
             ..cmd_opts.clone()
         })
-        .map_err(|e| api::Error::Other(format!("{e}")))?;
+        .map_err(|e| api::Error::Other(format!("Error generating image {e}")))?;
         Ok(())
     };
-    api::create_user_command("Silicon", silicon_cmd, &opts)?;
+    api::create_user_command("Silicon", silicon_cmd, &opts)
+        .map_err(|e| error::Error::Generic(format!("Failed to create command: {e}")))?;
     // Remaps `SS` to `Silicon` in visual mode.
     api::set_keymap(
         Mode::Visual,
