@@ -1,4 +1,4 @@
-*silicon.txt*             For NVIM v0.8.0            Last change: 2023 June 26
+*silicon.txt*            For NVIM v0.8.0           Last change: 2023 August 07
 
 ==============================================================================
 Table of Contents                                  *silicon-table-of-contents*
