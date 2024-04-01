@@ -4,15 +4,16 @@ use error::Error;
 use nvim_oxi as oxi;
 use oxi::{
     api::{self, opts::*, types::*},
-    Dictionary, Function, Object,
+    Array, Dictionary, Function, Object,
 };
 use silicon::{
     assets::HighlightingAssets,
+    directories::PROJECT_DIRS,
     font::FontCollection,
     formatter::{ImageFormatter, ImageFormatterBuilder},
     utils::{Background, ShadowAdder, ToRgba},
 };
-use std::path::PathBuf;
+use std::{env, path::PathBuf, collections::HashMap};
 use syntect::{easy::HighlightLines, util::LinesWithEndings};
 use time::{format_description, OffsetDateTime};
 use utils::{parse_str_color, IntoFont, IntoFontStyle};
@@ -21,6 +22,28 @@ mod clipboard;
 mod config;
 mod error;
 mod utils;
+
+fn list_themes() -> Result<Vec<String>, Error> {
+    let ha = HighlightingAssets::new();
+    let (_, ts) = (ha.syntax_set, ha.theme_set);
+
+    let themes = ts.themes.keys().cloned().collect::<Vec<_>>();
+    Ok(themes)
+}
+
+fn config_path() -> Result<String, Error> {
+    Ok(PROJECT_DIRS.config_dir().to_string_lossy().to_string())
+}
+
+fn rebuild_themes(path: Option<String>) -> Result<(), Error> {
+    let mut ha = HighlightingAssets::new();
+    if let Some(path) = path {
+        ha.add_from_folder(path)?;
+    }
+    ha.add_from_folder(PROJECT_DIRS.config_dir())?;
+    ha.dump_to_file(PROJECT_DIRS.cache_dir())?;
+    Ok(())
+}
 
 fn save_image(opts: Opts) -> Result<(), Error> {
     let ha = HighlightingAssets::new();
@@ -231,5 +254,14 @@ fn silicon() -> oxi::Result<Dictionary> {
             "version",
             Object::from(option_env!("SILICON_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))),
         ),
+        (
+            "config_path",
+            Object::from(Function::from_fn(|_: Option<String>| config_path())),
+        ),
+        (
+            "list_themes",
+            Object::from(Function::from_fn(|_: Option<String>| list_themes())),
+        ),
+        ("rebuild_themes", Object::from(Function::from_fn(rebuild_themes))),
     ]))
 }
