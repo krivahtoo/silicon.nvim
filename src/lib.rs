@@ -4,7 +4,7 @@ use error::Error;
 use nvim_oxi as oxi;
 use oxi::{
     api::{self, opts::*, types::*},
-    Array, Dictionary, Function, Object,
+    Dictionary, Function, Object,
 };
 use silicon::{
     assets::HighlightingAssets,
@@ -13,7 +13,7 @@ use silicon::{
     formatter::{ImageFormatter, ImageFormatterBuilder},
     utils::{Background, ShadowAdder, ToRgba},
 };
-use std::{env, path::PathBuf, collections::HashMap};
+use std::path::PathBuf;
 use syntect::{easy::HighlightLines, util::LinesWithEndings};
 use time::{format_description, OffsetDateTime};
 use utils::{parse_str_color, IntoFont, IntoFontStyle};
@@ -245,7 +245,7 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
     Ok(())
 }
 
-#[oxi::module]
+#[oxi::plugin]
 fn silicon() -> oxi::Result<Dictionary> {
     Ok(Dictionary::from_iter([
         ("capture", Object::from(Function::from_fn(save_image))),
@@ -262,6 +262,9 @@ fn silicon() -> oxi::Result<Dictionary> {
             "list_themes",
             Object::from(Function::from_fn(|_: Option<String>| list_themes())),
         ),
-        ("rebuild_themes", Object::from(Function::from_fn(rebuild_themes))),
+        (
+            "rebuild_themes",
+            Object::from(Function::from_fn(rebuild_themes)),
+        ),
     ]))
 }
