@@ -12,7 +12,7 @@ Render beautiful image of your code in neovim using [silicon](https://github.com
 
 <!-- panvimdoc-ignore-start -->
 
-https://user-images.githubusercontent.com/41364823/208242473-a65d0a0e-37a9-47f1-a4c2-fdc4da2f50ea.mp4
+https://github.com/krivahtoo/silicon.nvim/assets/41364823/d67912b0-190e-4990-bf79-039e79f8b4ad
 
 <!-- panvimdoc-ignore-end -->
 
