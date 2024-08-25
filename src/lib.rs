@@ -13,7 +13,7 @@ use silicon::{
     formatter::{ImageFormatter, ImageFormatterBuilder},
     utils::{Background, ShadowAdder, ToRgba},
 };
-use std::path::PathBuf;
+use std::{fs::create_dir_all, path::PathBuf};
 use syntect::{easy::HighlightLines, util::LinesWithEndings};
 use time::{format_description, OffsetDateTime};
 use utils::{parse_str_color, IntoFont, IntoFontStyle};
@@ -40,6 +40,8 @@ fn rebuild_themes(path: Option<String>) -> Result<(), Error> {
     if let Some(path) = path {
         ha.add_from_folder(path)?;
     }
+    create_dir_all(PROJECT_DIRS.config_dir().join("themes"))?;
+    create_dir_all(PROJECT_DIRS.config_dir().join("syntaxes"))?;
     ha.add_from_folder(PROJECT_DIRS.config_dir())?;
     ha.dump_to_file(PROJECT_DIRS.cache_dir())?;
     Ok(())
