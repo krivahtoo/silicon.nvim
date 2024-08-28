@@ -1,9 +1,9 @@
 use clipboard::dump_image_to_clipboard;
 use config::{Opts, OutputOpts};
 use error::Error;
-use nvim_oxi as oxi;
+use nvim_oxi::{self as oxi};
 use oxi::{
-    api::{self, opts::*, types::*},
+    api::{self, get_option_value, opts::*, types::*, Buffer},
     Dictionary, Function, Object,
 };
 use silicon::{
@@ -58,14 +58,15 @@ fn save_image(opts: Opts) -> Result<(), Error> {
 
     let code = utils::get_lines(&opts)?;
 
-    // HACK: This allows us to avoid currently broken oxi APIs to get the filetype option.
-    // Instead we call into VimL and get the value that way -- super ghetto, but it works without
-    // any breaking changes from what I can tell.
-    let ft = oxi::api::exec("echo &filetype", true)?
-        .ok_or_else(|| Error::Generic(String::from("Unable to determine filetype!")))?;
+    let ft: oxi::String = get_option_value(
+        "filetype",
+        &OptionOptsBuilder::default()
+            .buffer(Buffer::current())
+            .build(),
+    )?;
 
     let syntax = ps
-        .find_syntax_by_token(&ft)
+        .find_syntax_by_token(&ft.to_string())
         .ok_or_else(|| Error::Generic("Could not find syntax for filetype.".to_owned()))?;
 
     let theme = match ts
@@ -147,12 +148,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
             &NotifyOpts::default(),
         )?;
     } else if opts.output.clipboard.unwrap_or_default() {
-        dump_image_to_clipboard(&image)?;
-        api::notify(
-            "Image saved to clipboard",
-            LogLevel::Info,
-            &NotifyOpts::default(),
-        )?;
+        dump_image_to_clipboard(image);
     } else {
         let format = opts.output.format.unwrap_or_else(|| {
             String::from("silicon_[year][month][day]_[hour][minute][second].png")
@@ -230,7 +226,7 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
             ..cmd_opts.clone()
         })
         .map_err(|e| api::Error::Other(format!("Error generating image {e}")))?;
-        Ok(())
+        Ok::<_, api::Error>(())
     };
     api::create_user_command("Silicon", silicon_cmd, &opts)
         .map_err(|e| error::Error::Generic(format!("Failed to create command: {e}")))?;
@@ -250,23 +246,33 @@ fn setup(cmd_opts: Opts) -> Result<(), Error> {
 #[oxi::plugin]
 fn silicon() -> oxi::Result<Dictionary> {
     Ok(Dictionary::from_iter([
-        ("capture", Object::from(Function::from_fn(save_image))),
-        ("setup", Object::from(Function::from_fn(setup))),
+        (
+            "capture",
+            Object::from(Function::<_, Result<_, _>>::from_fn(save_image)),
+        ),
+        (
+            "setup",
+            Object::from(Function::<_, Result<_, _>>::from_fn(setup)),
+        ),
         (
             "version",
             Object::from(option_env!("SILICON_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))),
         ),
         (
             "config_path",
-            Object::from(Function::from_fn(|_: Option<String>| config_path())),
+            Object::from(Function::<_, Result<_, _>>::from_fn(|_: Option<String>| {
+                config_path()
+            })),
         ),
         (
             "list_themes",
-            Object::from(Function::from_fn(|_: Option<String>| list_themes())),
+            Object::from(Function::<_, Result<_, _>>::from_fn(|_: Option<String>| {
+                list_themes()
+            })),
         ),
         (
             "rebuild_themes",
-            Object::from(Function::from_fn(rebuild_themes)),
+            Object::from(Function::<_, Result<_, _>>::from_fn(rebuild_themes)),
         ),
     ]))
 }
