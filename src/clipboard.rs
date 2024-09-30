@@ -1,9 +1,12 @@
-use std::{borrow::Cow, time::{Duration, Instant}};
+use std::{
+    borrow::Cow,
+    time::{Duration, Instant},
+};
 
-use image::DynamicImage;
+use image::{DynamicImage, RgbaImage};
 use nvim_oxi::api::{self, opts::NotifyOpts, types::LogLevel};
 
-pub fn dump_image_to_clipboard(image: DynamicImage) {
+pub fn dump_image_to_clipboard(image: RgbaImage) {
     // using a thread so as not to block neovim while holding
     // clipboard content long enough for the user to paste
     // when there is no clipboard manager.
@@ -31,7 +34,7 @@ pub fn dump_image_to_clipboard(image: DynamicImage) {
         let img_data = ImageData {
             width: image.width() as usize,
             height: image.height() as usize,
-            bytes: Cow::from(image.as_rgba8().unwrap().as_raw()),
+            bytes: Cow::from(image.as_raw()),
         };
         let set = ctx.set();
         #[cfg(target_os = "linux")]
@@ -45,6 +48,13 @@ pub fn dump_image_to_clipboard(image: DynamicImage) {
         )
         .unwrap();
 
-        set.image(img_data).unwrap();
+        if let Err(e) = set.image(img_data) {
+            api::notify(
+                &format!("Failed to copy to clipboard: {e}"),
+                LogLevel::Error,
+                &NotifyOpts::default(),
+            )
+            .unwrap();
+        };
     });
 }

@@ -13,7 +13,7 @@ crate-type = ["cdylib"]
 anyhow = "1"
 nvim-oxi = { version = "0.5.1", features = ["neovim-0-10"]  }
 serde = { version = '1.0.209', features = ["derive"] }
-silicon = { version = '0.5', default-features = false, features = ["anyhow"] }
+silicon = { version = '0.5.2', default-features = false, features = ["anyhow"] }
 time = { version = "0.3", features = ["formatting", "local-offset"] }
 thiserror = "1.0.40"
 arboard = "3.4.0"
@@ -30,4 +30,4 @@ features = ["jpeg", "png", "jpeg_rayon"]
 
 [patch.crates-io]
 # nvim-oxi = { git = "https://github.com/noib3/nvim-oxi", rev = "51dd4734" }
-silicon = { git = "https://github.com/Aloxaf/silicon" }
+silicon = { git = "https://github.com/Aloxaf/silicon", rev = "7837ec85" }

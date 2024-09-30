@@ -16,5 +16,5 @@ pub enum Error {
     Parse(#[from] time::error::InvalidFormatDescription),
     Lua(#[from] nvim_oxi::lua::Error),
     Image(#[from] image::ImageError),
-    Io(#[from] io::Error)
+    Io(#[from] io::Error),
 }
