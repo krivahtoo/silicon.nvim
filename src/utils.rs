@@ -2,8 +2,8 @@ use image::Rgba;
 use nvim_oxi::api;
 use silicon::{font::FontStyle, utils::ToRgba};
 
-use super::error::Error;
 use super::config::Opts;
+use super::error::Error;
 
 pub trait IntoFont {
     fn to_font(self) -> Vec<(String, f32)>;

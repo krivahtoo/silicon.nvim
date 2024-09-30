@@ -120,8 +120,8 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         let font = FontCollection::new(fonts.as_slice())?;
 
         let (x, y) = (
-            image.to_rgba8().width() - (font.get_text_len(&text) + font.get_text_len("  ")),
-            image.to_rgba8().height() - (font.get_font_height() * 2),
+            image.width() - (font.get_text_len(&text) + font.get_text_len("  ")),
+            image.height() - (font.get_font_height() * 2),
         );
 
         font.draw_text_mut(
@@ -171,12 +171,12 @@ fn get_formatter(
     fonts: &[(String, f32)],
     opts: &Opts,
     adder: ShadowAdder,
-) -> Result<ImageFormatter, Error> {
+) -> Result<ImageFormatter<FontCollection>, Error> {
     let title = match opts.window_title.clone() {
         Some(f) => Some(f.call(())?),
         None => None,
     };
-    Ok(ImageFormatterBuilder::new()
+    Ok(ImageFormatterBuilder::<_>::new()
         .font(fonts.to_owned())
         .tab_width(opts.tab_width.unwrap_or(4))
         .line_pad(opts.line_pad.unwrap_or(2))
