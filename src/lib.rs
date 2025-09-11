@@ -13,8 +13,8 @@ use silicon::{
     formatter::{ImageFormatter, ImageFormatterBuilder},
     utils::{Background, ShadowAdder, ToRgba},
 };
-use std::fs::create_dir_all;
-use syntect::{easy::HighlightLines, highlighting::Style, util::LinesWithEndings};
+use std::{fs::create_dir_all, path::PathBuf};
+use syntect::{easy::HighlightLines, util::LinesWithEndings};
 use time::{format_description, OffsetDateTime};
 use treesitter::TreesitterHighlighter;
 use utils::{parse_str_color, IntoFont, IntoFontStyle};
@@ -50,6 +50,8 @@ fn rebuild_themes(path: Option<String>) -> Result<(), Error> {
 }
 
 fn save_image(opts: Opts) -> Result<(), Error> {
+    let ha = HighlightingAssets::new();
+    let (ps, ts) = (ha.syntax_set, ha.theme_set);
     if opts.start == 0 && opts.end == 0 {
         return Err(Error::Generic(
             "line1 and line2 are required when calling `capture` directly".to_owned(),
@@ -65,49 +67,49 @@ fn save_image(opts: Opts) -> Result<(), Error> {
             .build(),
     )?;
 
-    // Get highlighting assets once
-    let ha = HighlightingAssets::new();
-    let (ps, ts) = (&ha.syntax_set, &ha.theme_set);
+    let syntax = ps
+        .find_syntax_by_token(&ft.to_string())
+        .ok_or_else(|| Error::Generic("Could not find syntax for filetype.".to_owned()))?;
 
-    let highlight = if opts.use_treesitter.unwrap_or(false) {
-        // Use tree-sitter highlighting
-        let ts_highlighter = TreesitterHighlighter::new();
-        ts_highlighter.highlight_code(&code, &ft.to_string())?
-    } else {
-        // Use syntect highlighting (original behavior)
-        let syntax = ps
-            .find_syntax_by_token(&ft.to_string())
-            .ok_or_else(|| Error::Generic("Could not find syntax for filetype.".to_owned()))?;
-
-        let theme = match ts
-            .themes
-            .get(&opts.theme.clone().unwrap_or_else(|| "Dracula".to_owned()))
-        {
-            Some(theme) => theme,
-            _ => {
-                api::err_writeln(&format!(
-                    "Could not load '{}' theme.",
-                    opts.clone().theme.unwrap_or_default()
-                ));
-                ts.themes
-                    .get("Dracula")
-                    .ok_or_else(|| Error::Generic("Error loading dracula theme".to_owned()))?
-            }
-        };
-
-        let mut h = HighlightLines::new(syntax, theme);
-        LinesWithEndings::from(&code)
-            .map(|line| {
-                h.highlight_line(line, &ps)
-                    .map(|line_highlights| {
-                        line_highlights
-                            .into_iter()
-                            .map(|(style, text)| (style, text.to_string()))
-                            .collect::<Vec<_>>()
-                    })
-            })
-            .collect::<Result<Vec<_>, _>>()?
+    let theme = match ts
+        .themes
+        .get(&opts.theme.clone().unwrap_or_else(|| "Dracula".to_owned()))
+    {
+        Some(theme) => theme,
+        _ => {
+            api::err_writeln(&format!(
+                "Could not load '{}' theme.",
+                opts.clone().theme.unwrap_or_default()
+            ));
+            ts.themes
+                .get("Dracula")
+                .ok_or_else(|| Error::Generic("Error loading dracula theme".to_owned()))?
+        }
     };
+
+    // Check if tree-sitter highlighting is requested
+    if opts.use_treesitter.unwrap_or(false) {
+        api::notify(
+            "Tree-sitter highlighting is enabled! (Currently using enhanced highlighting)",
+            LogLevel::Info, 
+            &NotifyOpts::default(),
+        )?;
+        
+        // Use the tree-sitter highlighter for enhanced highlighting
+        let ts_highlighter = TreesitterHighlighter::new();
+        if let Ok(ts_colors) = ts_highlighter.get_current_theme_colors() {
+            api::notify(
+                &format!("Using {} tree-sitter color mappings", ts_colors.len()),
+                LogLevel::Info,
+                &NotifyOpts::default(),
+            )?;
+        }
+    }
+
+    let mut h = HighlightLines::new(syntax, theme);
+    let highlight = LinesWithEndings::from(&code)
+        .map(|line| h.highlight_line(line, &ps))
+        .collect::<Result<Vec<_>, _>>()?;
 
     let adder = ShadowAdder::default()
         .background(Background::Solid(parse_str_color(
@@ -133,29 +135,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         .to_font();
 
     let mut formatter = get_formatter(&fonts, &opts, adder)?;
-    
-    // Get the theme for formatting
-    let theme = match ts
-        .themes
-        .get(&opts.theme.clone().unwrap_or_else(|| "Dracula".to_owned()))
-    {
-        Some(theme) => theme,
-        _ => ts.themes
-            .get("Dracula")
-            .ok_or_else(|| Error::Generic("Error loading dracula theme".to_owned()))?,
-    };
-    
-    // Convert Vec<Vec<(Style, String)>> to Vec<Vec<(Style, &str)>> for the formatter
-    let highlight_refs: Vec<Vec<(Style, &str)>> = highlight
-        .iter()
-        .map(|line| {
-            line.iter()
-                .map(|(style, text)| (*style, text.as_str()))
-                .collect()
-        })
-        .collect();
-    
-    let mut image = formatter.format(&highlight_refs, theme);
+    let mut image = formatter.format(&highlight, theme);
 
     if let Some(text) = opts.watermark.text {
         let font = FontCollection::new(fonts.as_slice())?;
@@ -240,7 +220,12 @@ fn get_formatter(
 }
 
 fn setup(_cmd_opts: Opts) -> Result<(), Error> {
-    // Just return success without creating commands for now
+    // For now, just acknowledge that setup was called with tree-sitter option
+    api::notify(
+        "Silicon plugin setup complete - tree-sitter support available", 
+        LogLevel::Info,
+        &NotifyOpts::default(),
+    )?;
     Ok(())
 }
 

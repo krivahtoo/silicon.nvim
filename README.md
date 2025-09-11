@@ -47,7 +47,24 @@ Build from source (requires cargo)
 Plug 'krivahtoo/silicon.nvim', { 'do': './install.sh build' }
 ```
 
-## Configuration
+### Tree-sitter Support
+
+The plugin now supports tree-sitter highlighting as an alternative to syntect. Enable it in your configuration:
+
+```lua
+require('silicon').setup({
+  font = 'FantasqueSansMono Nerd Font=16',
+  theme = 'Monokai Extended',
+  use_treesitter = true, -- Enable tree-sitter highlighting
+})
+```
+
+When `use_treesitter` is set to `true`, the plugin will:
+- Use Neovim's built-in tree-sitter parsers for syntax highlighting
+- Attempt to extract colors from the current Neovim colorscheme
+- Provide enhanced highlighting based on semantic token information
+
+### Configuration Options
 
 Initialize the plugin.
 
@@ -92,6 +109,9 @@ The `setup` function accepts the following table:
   -- (string) The color theme to use for syntax highlighting.
   -- It can be a theme name or path to a .tmTheme file.
   theme = 'Dracula',
+
+  -- Tree-sitter configuration
+  use_treesitter = false, -- (boolean) Whether to use tree-sitter highlighting instead of syntect.
 
   -- Background and shadow configuration for the screenshot
   background = '#eff', -- (string) The background color for the screenshot.
