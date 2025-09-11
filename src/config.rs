@@ -44,6 +44,9 @@ pub struct Opts {
 
     pub background: Option<String>,
 
+    /// Whether to use tree-sitter highlighting instead of syntect
+    pub use_treesitter: Option<bool>,
+
     #[serde(default)]
     pub shadow: ShadowOpts,
 

@@ -13,10 +13,13 @@ crate-type = ["cdylib"]
 anyhow = "1"
 nvim-oxi = { version = "0.5.1", features = ["neovim-0-10"]  }
 serde = { version = '1.0.209', features = ["derive"] }
+serde_json = "1.0"
 silicon = { version = '0.5.2', default-features = false, features = ["anyhow"] }
 time = { version = "0.3", features = ["formatting", "local-offset"] }
 thiserror = "1.0.40"
 arboard = "3.4.0"
+tree-sitter = "0.23"
+tree-sitter-highlight = "0.23"
 
 [dependencies.syntect]
 version = "5.0"
