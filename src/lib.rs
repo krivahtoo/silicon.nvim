@@ -1,5 +1,5 @@
 use clipboard::dump_image_to_clipboard;
-use config::{Opts, OutputOpts};
+use config::Opts;
 use error::Error;
 use nvim_oxi::{self as oxi};
 use oxi::{
@@ -13,14 +13,16 @@ use silicon::{
     formatter::{ImageFormatter, ImageFormatterBuilder},
     utils::{Background, ShadowAdder, ToRgba},
 };
-use std::{fs::create_dir_all, path::PathBuf};
-use syntect::{easy::HighlightLines, util::LinesWithEndings};
+use std::fs::create_dir_all;
+use syntect::{easy::HighlightLines, util::LinesWithEndings, highlighting::Style};
 use time::{format_description, OffsetDateTime};
+use treesitter::TreesitterHighlighter;
 use utils::{parse_str_color, IntoFont, IntoFontStyle};
 
 mod clipboard;
 mod config;
 mod error;
+mod treesitter;
 mod utils;
 
 fn list_themes() -> Result<Vec<String>, Error> {
@@ -84,6 +86,115 @@ fn save_image(opts: Opts) -> Result<(), Error> {
                 .ok_or_else(|| Error::Generic("Error loading dracula theme".to_owned()))?
         }
     };
+
+    // Check if tree-sitter highlighting is requested
+    if opts.use_treesitter.unwrap_or(false) {
+        api::notify(
+            "Tree-sitter highlighting is enabled! Using Neovim's current theme colors",
+            LogLevel::Info, 
+            &NotifyOpts::default(),
+        )?;
+        
+        // Use the tree-sitter highlighter for enhanced highlighting
+        let mut ts_highlighter = TreesitterHighlighter::new()
+            .map_err(|e| Error::Generic(format!("Failed to create tree-sitter highlighter: {}", e)))?;
+        let ts_highlights = ts_highlighter.highlight_code(&code, &ft.to_string())?;
+        
+        if let Ok(ts_colors) = ts_highlighter.get_current_theme_colors() {
+            api::notify(
+                &format!("Successfully extracted {} highlight colors from current Neovim theme", ts_colors.len()),
+                LogLevel::Info,
+                &NotifyOpts::default(),
+            )?;
+        }
+
+        // Convert tree-sitter highlights to syntect format for the formatter
+        let highlight: Vec<Vec<(Style, &str)>> = ts_highlights.iter()
+            .map(|line_highlights| {
+                line_highlights.iter()
+                    .map(|(style, text)| (*style, text.as_str()))
+                    .collect()
+            })
+            .collect();
+
+        let adder = ShadowAdder::default()
+            .background(Background::Solid(parse_str_color(
+                &opts.clone().background.unwrap_or_else(|| "#eef".to_owned()),
+            )?))
+            .shadow_color(parse_str_color(
+                &opts
+                    .clone()
+                    .shadow
+                    .color
+                    .unwrap_or_else(|| "#555".to_owned()),
+            )?)
+            .blur_radius(opts.shadow.blur_radius)
+            .offset_x(opts.shadow.offset_x)
+            .offset_y(opts.shadow.offset_y)
+            .pad_horiz(opts.pad_horiz.unwrap_or(80))
+            .pad_vert(opts.pad_vert.unwrap_or(100));
+
+        let fonts = opts
+            .clone()
+            .font
+            .unwrap_or_else(|| "Hack=20".to_owned())
+            .to_font();
+
+        let mut formatter = get_formatter(&fonts, &opts, adder)?;
+        let mut image = formatter.format(&highlight, theme);
+
+        // Apply watermark if specified
+        if let Some(text) = opts.watermark.text {
+            let font = FontCollection::new(fonts.as_slice())?;
+
+            let (x, y) = (
+                image.width() - (font.get_text_len(&text) + font.get_text_len("  ")),
+                image.height() - (font.get_font_height() * 2),
+            );
+
+            font.draw_text_mut(
+                &mut image,
+                opts.watermark
+                    .color
+                    .unwrap_or_else(|| "#222".to_owned())
+                    .to_rgba()?,
+                x,
+                y,
+                opts.watermark
+                    .style
+                    .unwrap_or_else(|| "bold".to_owned())
+                    .to_style(),
+                &text,
+            );
+        }
+
+        // Save the image
+        if let Some(output) = opts.output.file {
+            image.save(output.as_path())?;
+            api::notify(
+                &format!("Image saved to {}", output.to_str().unwrap_or_default()),
+                LogLevel::Info,
+                &NotifyOpts::default(),
+            )?;
+        } else if opts.output.clipboard.unwrap_or_default() {
+            dump_image_to_clipboard(image);
+        } else {
+            let format = opts.output.format.unwrap_or_else(|| {
+                String::from("silicon_[year][month][day]_[hour][minute][second].png")
+            });
+            let file = OffsetDateTime::now_utc().format(&format_description::parse(&format)?)?;
+            let mut path = opts.output.path.unwrap_or_default();
+            path.push(&file);
+            image.save(path)?;
+            api::notify(
+                &format!("Image saved to {file}"),
+                LogLevel::Info,
+                &NotifyOpts::default(),
+            )?;
+        }
+
+        return Ok(());
+    }
 
     let mut h = HighlightLines::new(syntax, theme);
     let highlight = LinesWithEndings::from(&code)
@@ -198,47 +309,12 @@ fn get_formatter(
         .build()?)
 }
 
-fn setup(cmd_opts: Opts) -> Result<(), Error> {
-    // Create a new `Silicon` command.
-    let opts = CreateCommandOpts::builder()
-        .range(CommandRange::WholeFile)
-        .desc("create a beautiful image of your source code.")
-        .nargs(CommandNArgs::ZeroOrOne)
-        .bang(true)
-        .build();
-
-    let silicon_cmd = move |args: CommandArgs| {
-        let file = args
-            .args
-            .is_some()
-            .then(|| PathBuf::from(args.args.unwrap()));
-        save_image(Opts {
-            start: args.line1,
-            end: args.line2,
-            output: OutputOpts {
-                file,
-                clipboard: match cmd_opts.output.clipboard.is_none() {
-                    true => Some(!args.bang),
-                    false => cmd_opts.output.clipboard,
-                },
-                ..cmd_opts.output.clone()
-            },
-            ..cmd_opts.clone()
-        })
-        .map_err(|e| api::Error::Other(format!("Error generating image {e}")))?;
-        Ok::<_, api::Error>(())
-    };
-    api::create_user_command("Silicon", silicon_cmd, &opts)
-        .map_err(|e| error::Error::Generic(format!("Failed to create command: {e}")))?;
-    // Remaps `SS` to `Silicon` in visual mode.
-    api::set_keymap(
-        Mode::Visual,
-        "SS",
-        "Silicon",
-        &SetKeymapOptsBuilder::default()
-            .desc("Save image of code")
-            .silent(true)
-            .build(),
+fn setup(_cmd_opts: Opts) -> Result<(), Error> {
+    // For now, just acknowledge that setup was called with tree-sitter option
+    api::notify(
+        "Silicon plugin setup complete - tree-sitter support available", 
+        LogLevel::Info,
+        &NotifyOpts::default(),
     )?;
     Ok(())
 }

@@ -47,7 +47,53 @@ Build from source (requires cargo)
 Plug 'krivahtoo/silicon.nvim', { 'do': './install.sh build' }
 ```
 
-## Configuration
+### Tree-sitter Support
+
+The plugin now supports tree-sitter highlighting as an alternative to syntect, with direct integration with nvim-treesitter parsers:
+
+```lua
+require('silicon').setup({
+  font = 'FantasqueSansMono Nerd Font=16',
+  theme = 'Monokai Extended',
+  use_treesitter = true, -- Enable tree-sitter highlighting
+})
+```
+
+#### Parser Integration Options
+
+The plugin can be compiled with different tree-sitter parser options:
+
+1. **Default (builtin-parsers)**: Ships with built-in tree-sitter parsers for common languages
+2. **nvim-treesitter-only**: Uses only parsers installed through nvim-treesitter
+
+To build without builtin parsers (relies entirely on nvim-treesitter):
+```bash
+cargo build --no-default-features --features nvim-treesitter-only
+```
+
+#### How it works
+
+When `use_treesitter` is enabled, the plugin will:
+- Check if nvim-treesitter has the required parser installed for your language
+- Use builtin parsers as fallback if available (default configuration)
+- Extract queries from Neovim's runtime path (`queries/*/highlights.scm`, etc.)
+- Extract colors from your current Neovim colorscheme for authentic theme matching
+- Provide enhanced highlighting based on semantic token information
+
+#### Supported Languages
+
+The following languages have built-in parser support:
+- Lua, Rust, Python, JavaScript, TypeScript, JSON, Bash, C, C++, Go
+
+Additional languages can be used if you have nvim-treesitter installed with the corresponding parsers.
+
+#### Error Messages
+
+If a parser is not available, you'll see helpful error messages:
+- "Install with ':TSInstall <language>' or enable the 'builtin-parsers' feature"
+- "nvim-treesitter has <language> parser but no builtin parser available"
+
+### Configuration Options
 
 Initialize the plugin.
 
@@ -92,6 +138,9 @@ The `setup` function accepts the following table:
   -- (string) The color theme to use for syntax highlighting.
   -- It can be a theme name or path to a .tmTheme file.
   theme = 'Dracula',
+
+  -- Tree-sitter configuration
+  use_treesitter = false, -- (boolean) Whether to use tree-sitter highlighting instead of syntect.
 
   -- Background and shadow configuration for the screenshot
   background = '#eff', -- (string) The background color for the screenshot.
