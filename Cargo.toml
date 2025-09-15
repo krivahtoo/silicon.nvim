@@ -20,16 +20,17 @@ thiserror = "1.0.40"
 arboard = "3.4.0"
 tree-sitter = "0.23"
 tree-sitter-highlight = "0.23"
-tree-sitter-lua = "0.2"
-tree-sitter-rust = "0.23"
-tree-sitter-python = "0.23"
-tree-sitter-javascript = "0.23"
-tree-sitter-typescript = "0.23"
-tree-sitter-json = "0.23"
-tree-sitter-bash = "0.23"
-tree-sitter-c = "0.23"
-tree-sitter-cpp = "0.23"
-tree-sitter-go = "0.23"
+# Optional language parsers - these can be omitted if using only nvim-treesitter
+tree-sitter-lua = { version = "0.2", optional = true }
+tree-sitter-rust = { version = "0.23", optional = true }
+tree-sitter-python = { version = "0.23", optional = true }
+tree-sitter-javascript = { version = "0.23", optional = true }
+tree-sitter-typescript = { version = "0.23", optional = true }
+tree-sitter-json = { version = "0.23", optional = true }
+tree-sitter-bash = { version = "0.23", optional = true }
+tree-sitter-c = { version = "0.23", optional = true }
+tree-sitter-cpp = { version = "0.23", optional = true }
+tree-sitter-go = { version = "0.23", optional = true }
 
 [dependencies.syntect]
 version = "5.0"
@@ -40,6 +41,22 @@ features = ["parsing", "dump-load", "regex-onig"]
 version = "0.24"
 default-features = false
 features = ["jpeg", "png", "jpeg_rayon"]
+
+[features]
+default = ["builtin-parsers"]
+builtin-parsers = [
+    "tree-sitter-lua",
+    "tree-sitter-rust", 
+    "tree-sitter-python",
+    "tree-sitter-javascript",
+    "tree-sitter-typescript",
+    "tree-sitter-json",
+    "tree-sitter-bash",
+    "tree-sitter-c",
+    "tree-sitter-cpp",
+    "tree-sitter-go"
+]
+nvim-treesitter-only = []
 
 [patch.crates-io]
 # nvim-oxi = { git = "https://github.com/noib3/nvim-oxi", rev = "51dd4734" }

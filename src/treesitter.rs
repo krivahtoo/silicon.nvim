@@ -1,20 +1,30 @@
 use crate::error::Error;
 use std::collections::HashMap;
 use syntect::highlighting::{Color, FontStyle, Style};
-use nvim_oxi::api::{get_hl_by_name, get_runtime_file};
+use nvim_oxi::api::{get_hl_by_name, get_runtime_file, eval};
 use tree_sitter_highlight::{Highlighter, HighlightConfiguration, HighlightEvent};
 use tree_sitter::Language;
 
-// Language support
+// Conditional static language support (only if builtin-parsers feature is enabled)
+#[cfg(feature = "tree-sitter-lua")]
 extern "C" { fn tree_sitter_lua() -> Language; }
+#[cfg(feature = "tree-sitter-rust")]
 extern "C" { fn tree_sitter_rust() -> Language; }
+#[cfg(feature = "tree-sitter-python")]
 extern "C" { fn tree_sitter_python() -> Language; }
+#[cfg(feature = "tree-sitter-javascript")]
 extern "C" { fn tree_sitter_javascript() -> Language; }
+#[cfg(feature = "tree-sitter-typescript")]
 extern "C" { fn tree_sitter_typescript() -> Language; }
+#[cfg(feature = "tree-sitter-json")]
 extern "C" { fn tree_sitter_json() -> Language; }
+#[cfg(feature = "tree-sitter-bash")]
 extern "C" { fn tree_sitter_bash() -> Language; }
+#[cfg(feature = "tree-sitter-c")]
 extern "C" { fn tree_sitter_c() -> Language; }
+#[cfg(feature = "tree-sitter-cpp")]
 extern "C" { fn tree_sitter_cpp() -> Language; }
+#[cfg(feature = "tree-sitter-go")]
 extern "C" { fn tree_sitter_go() -> Language; }
 
 // Define highlight names that we will recognize (from tree-sitter-highlight docs)
@@ -55,63 +65,107 @@ pub struct TreesitterHighlighter {
 impl TreesitterHighlighter {
     pub fn new() -> Result<Self, Error> {
         let highlighter = Highlighter::new();
-        let mut configurations = HashMap::new();
+        let configurations = HashMap::new();
         
-        // Load language configurations
-        if let Ok(config) = Self::load_language_config("lua", unsafe { tree_sitter_lua() }) {
-            configurations.insert("lua".to_string(), config);
-        }
-        if let Ok(config) = Self::load_language_config("rust", unsafe { tree_sitter_rust() }) {
-            // Create separate configs for aliases since HighlightConfiguration doesn't implement Clone
-            if let Ok(config_alias) = Self::load_language_config("rust", unsafe { tree_sitter_rust() }) {
-                configurations.insert("rs".to_string(), config_alias);
-            }
-            configurations.insert("rust".to_string(), config);
-        }
-        if let Ok(config) = Self::load_language_config("python", unsafe { tree_sitter_python() }) {
-            if let Ok(config_alias) = Self::load_language_config("python", unsafe { tree_sitter_python() }) {
-                configurations.insert("py".to_string(), config_alias);
-            }
-            configurations.insert("python".to_string(), config);
-        }
-        if let Ok(config) = Self::load_language_config("javascript", unsafe { tree_sitter_javascript() }) {
-            if let Ok(config_alias) = Self::load_language_config("javascript", unsafe { tree_sitter_javascript() }) {
-                configurations.insert("js".to_string(), config_alias);
-            }
-            configurations.insert("javascript".to_string(), config);
-        }
-        if let Ok(config) = Self::load_language_config("typescript", unsafe { tree_sitter_typescript() }) {
-            if let Ok(config_alias) = Self::load_language_config("typescript", unsafe { tree_sitter_typescript() }) {
-                configurations.insert("ts".to_string(), config_alias);
-            }
-            configurations.insert("typescript".to_string(), config);
-        }
-        if let Ok(config) = Self::load_language_config("json", unsafe { tree_sitter_json() }) {
-            configurations.insert("json".to_string(), config);
-        }
-        if let Ok(config) = Self::load_language_config("bash", unsafe { tree_sitter_bash() }) {
-            if let Ok(config_alias) = Self::load_language_config("bash", unsafe { tree_sitter_bash() }) {
-                configurations.insert("sh".to_string(), config_alias);
-            }
-            configurations.insert("bash".to_string(), config);
-        }
-        if let Ok(config) = Self::load_language_config("c", unsafe { tree_sitter_c() }) {
-            configurations.insert("c".to_string(), config);
-        }
-        if let Ok(config) = Self::load_language_config("cpp", unsafe { tree_sitter_cpp() }) {
-            if let Ok(config_alias) = Self::load_language_config("cpp", unsafe { tree_sitter_cpp() }) {
-                configurations.insert("cxx".to_string(), config_alias);
-            }
-            configurations.insert("cpp".to_string(), config);
-        }
-        if let Ok(config) = Self::load_language_config("go", unsafe { tree_sitter_go() }) {
-            configurations.insert("go".to_string(), config);
-        }
-        
+        // Languages will be loaded dynamically when needed using nvim-treesitter
         Ok(Self {
             highlighter,
             configurations,
         })
+    }
+
+    /// Load parser dynamically from nvim-treesitter if available
+    fn get_or_load_language(&mut self, filetype: &str) -> Result<&HighlightConfiguration, Error> {
+        // Check if we already have the configuration cached
+        if self.configurations.contains_key(filetype) {
+            return Ok(self.configurations.get(filetype).unwrap());
+        }
+
+        // Try to load the language using nvim-treesitter
+        let language = self.load_nvim_treesitter_parser(filetype)?;
+        let config = Self::load_language_config(filetype, language)?;
+        
+        self.configurations.insert(filetype.to_string(), config);
+        Ok(self.configurations.get(filetype).unwrap())
+    }
+
+    /// Load a tree-sitter parser, preferring nvim-treesitter availability check
+    fn load_nvim_treesitter_parser(&self, language_name: &str) -> Result<Language, Error> {
+        // Check if nvim-treesitter has the parser installed
+        let nvim_treesitter_available = self.check_nvim_treesitter_parser(language_name);
+        
+        if nvim_treesitter_available {
+            // If nvim-treesitter has it, use our static parser (if available)
+            // This ensures we use the same language that the user has in their editor
+            self.get_static_language(language_name).or_else(|_| {
+                Err(Error::Generic(format!(
+                    "nvim-treesitter has {} parser but no builtin parser available. Consider using the 'builtin-parsers' feature.", 
+                    language_name
+                )))
+            })
+        } else {
+            // If not available in nvim-treesitter, try static as fallback
+            self.get_static_language(language_name).or_else(|_| {
+                Err(Error::Generic(format!(
+                    "No parser available for {}. Install with ':TSInstall {}' or enable the 'builtin-parsers' feature.", 
+                    language_name, language_name
+                )))
+            })
+        }
+    }
+
+    /// Check if nvim-treesitter has a parser for the given language
+    fn check_nvim_treesitter_parser(&self, language_name: &str) -> bool {
+        let lua_code = format!(
+            r#"
+            local ok, ts = pcall(require, 'nvim-treesitter.parsers')
+            if not ok then
+                return false
+            end
+            
+            local parser_info = ts.get_parser_configs()['{}']
+            if not parser_info then
+                return false
+            end
+            
+            -- Check if the parser is installed
+            local lang_ok = pcall(vim.treesitter.language.get_lang, '{}')
+            return lang_ok
+            "#,
+            language_name, language_name
+        );
+
+        match eval::<bool>(&lua_code) {
+            Ok(available) => available,
+            Err(_) => false, // If we can't check, assume not available
+        }
+    }
+
+    /// Get static fallback language parser (only if builtin parsers are available)
+    fn get_static_language(&self, language_name: &str) -> Result<Language, Error> {
+        match language_name {
+            #[cfg(feature = "tree-sitter-lua")]
+            "lua" => Ok(unsafe { tree_sitter_lua() }),
+            #[cfg(feature = "tree-sitter-rust")]
+            "rust" | "rs" => Ok(unsafe { tree_sitter_rust() }),
+            #[cfg(feature = "tree-sitter-python")]
+            "python" | "py" => Ok(unsafe { tree_sitter_python() }),
+            #[cfg(feature = "tree-sitter-javascript")]
+            "javascript" | "js" => Ok(unsafe { tree_sitter_javascript() }),
+            #[cfg(feature = "tree-sitter-typescript")]
+            "typescript" | "ts" => Ok(unsafe { tree_sitter_typescript() }),
+            #[cfg(feature = "tree-sitter-json")]
+            "json" => Ok(unsafe { tree_sitter_json() }),
+            #[cfg(feature = "tree-sitter-bash")]
+            "bash" | "sh" => Ok(unsafe { tree_sitter_bash() }),
+            #[cfg(feature = "tree-sitter-c")]
+            "c" => Ok(unsafe { tree_sitter_c() }),
+            #[cfg(feature = "tree-sitter-cpp")]
+            "cpp" | "cxx" => Ok(unsafe { tree_sitter_cpp() }),
+            #[cfg(feature = "tree-sitter-go")]
+            "go" => Ok(unsafe { tree_sitter_go() }),
+            _ => Err(Error::Generic(format!("No builtin parser available for language: {}. Either enable the builtin-parsers feature or ensure nvim-treesitter has the {} parser installed.", language_name, language_name)))
+        }
     }
 
     /// Load highlighting configuration for a language by extracting queries from Neovim
@@ -171,15 +225,16 @@ impl TreesitterHighlighter {
         // Get current theme colors from Neovim first
         let theme_colors = self.get_current_theme_colors()?;
         
-        // Check if we have a language configuration for this filetype
-        let has_config = self.configurations.contains_key(filetype);
-        
-        if has_config {
-            // Use proper tree-sitter highlighting
-            self.treesitter_highlight_with_theme_by_filetype(code, filetype, &theme_colors)
-        } else {
-            // Fallback to enhanced highlighting for unsupported languages
-            self.enhanced_highlight_with_theme(code, filetype, &theme_colors)
+        // Try to get or load the language configuration dynamically
+        match self.get_or_load_language(filetype) {
+            Ok(_) => {
+                // Use proper tree-sitter highlighting
+                self.treesitter_highlight_with_theme_by_filetype(code, filetype, &theme_colors)
+            }
+            Err(_) => {
+                // Fallback to enhanced highlighting for unsupported languages
+                self.enhanced_highlight_with_theme(code, filetype, &theme_colors)
+            }
         }
     }
 
