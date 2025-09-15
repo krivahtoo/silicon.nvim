@@ -1,27 +1,362 @@
 use crate::error::Error;
 use std::collections::HashMap;
 use syntect::highlighting::{Color, FontStyle, Style};
-use nvim_oxi::api::get_hl_by_name;
+use nvim_oxi::api::{get_hl_by_name, get_runtime_file};
+use tree_sitter_highlight::{Highlighter, HighlightConfiguration, HighlightEvent};
+use tree_sitter::Language;
 
-pub struct TreesitterHighlighter;
+// Language support
+extern "C" { fn tree_sitter_lua() -> Language; }
+extern "C" { fn tree_sitter_rust() -> Language; }
+extern "C" { fn tree_sitter_python() -> Language; }
+extern "C" { fn tree_sitter_javascript() -> Language; }
+extern "C" { fn tree_sitter_typescript() -> Language; }
+extern "C" { fn tree_sitter_json() -> Language; }
+extern "C" { fn tree_sitter_bash() -> Language; }
+extern "C" { fn tree_sitter_c() -> Language; }
+extern "C" { fn tree_sitter_cpp() -> Language; }
+extern "C" { fn tree_sitter_go() -> Language; }
+
+// Define highlight names that we will recognize (from tree-sitter-highlight docs)
+const HIGHLIGHT_NAMES: &[&str] = &[
+    "attribute",
+    "comment",
+    "constant",
+    "constant.builtin",
+    "constructor",
+    "embedded",
+    "function",
+    "function.builtin",
+    "keyword",
+    "module",
+    "number",
+    "operator",
+    "property",
+    "property.builtin",
+    "punctuation",
+    "punctuation.bracket",
+    "punctuation.delimiter",
+    "punctuation.special",
+    "string",
+    "string.special",
+    "tag",
+    "type",
+    "type.builtin",
+    "variable",
+    "variable.builtin",
+    "variable.parameter",
+];
+
+pub struct TreesitterHighlighter {
+    highlighter: Highlighter,
+    configurations: HashMap<String, HighlightConfiguration>,
+}
 
 impl TreesitterHighlighter {
-    pub fn new() -> Self {
-        Self
+    pub fn new() -> Result<Self, Error> {
+        let highlighter = Highlighter::new();
+        let mut configurations = HashMap::new();
+        
+        // Load language configurations
+        if let Ok(config) = Self::load_language_config("lua", unsafe { tree_sitter_lua() }) {
+            configurations.insert("lua".to_string(), config);
+        }
+        if let Ok(config) = Self::load_language_config("rust", unsafe { tree_sitter_rust() }) {
+            // Create separate configs for aliases since HighlightConfiguration doesn't implement Clone
+            if let Ok(config_alias) = Self::load_language_config("rust", unsafe { tree_sitter_rust() }) {
+                configurations.insert("rs".to_string(), config_alias);
+            }
+            configurations.insert("rust".to_string(), config);
+        }
+        if let Ok(config) = Self::load_language_config("python", unsafe { tree_sitter_python() }) {
+            if let Ok(config_alias) = Self::load_language_config("python", unsafe { tree_sitter_python() }) {
+                configurations.insert("py".to_string(), config_alias);
+            }
+            configurations.insert("python".to_string(), config);
+        }
+        if let Ok(config) = Self::load_language_config("javascript", unsafe { tree_sitter_javascript() }) {
+            if let Ok(config_alias) = Self::load_language_config("javascript", unsafe { tree_sitter_javascript() }) {
+                configurations.insert("js".to_string(), config_alias);
+            }
+            configurations.insert("javascript".to_string(), config);
+        }
+        if let Ok(config) = Self::load_language_config("typescript", unsafe { tree_sitter_typescript() }) {
+            if let Ok(config_alias) = Self::load_language_config("typescript", unsafe { tree_sitter_typescript() }) {
+                configurations.insert("ts".to_string(), config_alias);
+            }
+            configurations.insert("typescript".to_string(), config);
+        }
+        if let Ok(config) = Self::load_language_config("json", unsafe { tree_sitter_json() }) {
+            configurations.insert("json".to_string(), config);
+        }
+        if let Ok(config) = Self::load_language_config("bash", unsafe { tree_sitter_bash() }) {
+            if let Ok(config_alias) = Self::load_language_config("bash", unsafe { tree_sitter_bash() }) {
+                configurations.insert("sh".to_string(), config_alias);
+            }
+            configurations.insert("bash".to_string(), config);
+        }
+        if let Ok(config) = Self::load_language_config("c", unsafe { tree_sitter_c() }) {
+            configurations.insert("c".to_string(), config);
+        }
+        if let Ok(config) = Self::load_language_config("cpp", unsafe { tree_sitter_cpp() }) {
+            if let Ok(config_alias) = Self::load_language_config("cpp", unsafe { tree_sitter_cpp() }) {
+                configurations.insert("cxx".to_string(), config_alias);
+            }
+            configurations.insert("cpp".to_string(), config);
+        }
+        if let Ok(config) = Self::load_language_config("go", unsafe { tree_sitter_go() }) {
+            configurations.insert("go".to_string(), config);
+        }
+        
+        Ok(Self {
+            highlighter,
+            configurations,
+        })
+    }
+
+    /// Load highlighting configuration for a language by extracting queries from Neovim
+    fn load_language_config(language_name: &str, language: Language) -> Result<HighlightConfiguration, Error> {
+        // Extract queries from Neovim's runtime path
+        let (highlight_query, injections_query, locals_query) = Self::extract_nvim_queries(language_name)?;
+        
+        let mut config = HighlightConfiguration::new(
+            language,
+            language_name,
+            &highlight_query,
+            &injections_query,
+            &locals_query,
+        ).map_err(|e| Error::Generic(format!("Failed to create highlight config for {}: {}", language_name, e)))?;
+        
+        // Configure the recognized highlight names
+        config.configure(HIGHLIGHT_NAMES);
+        
+        Ok(config)
+    }
+
+    /// Extract HIGHLIGHT_QUERY, INJECTIONS_QUERY and LOCALS_QUERY from Neovim's search path
+    fn extract_nvim_queries(language_name: &str) -> Result<(String, String, String), Error> {
+        let highlight_query = Self::get_nvim_query(language_name, "highlights")?;
+        let injections_query = Self::get_nvim_query(language_name, "injections").unwrap_or_default();
+        let locals_query = Self::get_nvim_query(language_name, "locals").unwrap_or_default();
+        
+        Ok((highlight_query, injections_query, locals_query))
+    }
+
+    /// Get a specific query file from Neovim's runtime path
+    fn get_nvim_query(language_name: &str, query_type: &str) -> Result<String, Error> {
+        let query_path = format!("queries/{}/{}.scm", language_name, query_type);
+        
+        // Try to get the query file from Neovim's runtime path
+        let files_result = get_runtime_file(&query_path, false);
+        match files_result {
+            Ok(files) => {
+                let files_vec: Vec<_> = files.collect();
+                if let Some(file_path) = files_vec.first() {
+                    std::fs::read_to_string(file_path)
+                        .map_err(|e| Error::Generic(format!("Failed to read query file {}: {}", file_path.display(), e)))
+                } else {
+                    Err(Error::Generic(format!("No query file found for {} {}", language_name, query_type)))
+                }
+            }
+            Err(e) => Err(Error::Generic(format!("Failed to get runtime file {}: {}", query_path, e)))
+        }
     }
 
     /// Get tree-sitter highlights for the given code and filetype
     pub fn highlight_code(
-        &self,
+        &mut self,
         code: &str,
         filetype: &str,
     ) -> Result<Vec<Vec<(Style, String)>>, Error> {
         // Get current theme colors from Neovim first
         let theme_colors = self.get_current_theme_colors()?;
         
-        // For now, use enhanced highlighting with Neovim theme colors
-        // This integrates with Neovim's color scheme while we work on full tree-sitter parsing
-        self.enhanced_highlight_with_theme(code, filetype, &theme_colors)
+        // Check if we have a language configuration for this filetype
+        let has_config = self.configurations.contains_key(filetype);
+        
+        if has_config {
+            // Use proper tree-sitter highlighting
+            self.treesitter_highlight_with_theme_by_filetype(code, filetype, &theme_colors)
+        } else {
+            // Fallback to enhanced highlighting for unsupported languages
+            self.enhanced_highlight_with_theme(code, filetype, &theme_colors)
+        }
+    }
+
+    /// Perform actual tree-sitter highlighting using filetype lookup
+    fn treesitter_highlight_with_theme_by_filetype(
+        &mut self,
+        code: &str,
+        filetype: &str,
+        theme_colors: &HashMap<String, Color>,
+    ) -> Result<Vec<Vec<(Style, String)>>, Error> {
+        // Check if we have the configuration - we already verified this exists
+        if !self.configurations.contains_key(filetype) {
+            return Err(Error::Generic(format!("No configuration found for filetype: {}", filetype)));
+        }
+        
+        // Clone the configuration to avoid borrowing issues
+        // Since HighlightConfiguration doesn't implement Clone, we need to work around this
+        // by handling the highlighting in this method
+        self.treesitter_highlight_with_theme_direct(code, filetype, theme_colors)
+    }
+
+    /// Direct tree-sitter highlighting without separate config borrowing
+    fn treesitter_highlight_with_theme_direct(
+        &mut self,
+        code: &str,
+        filetype: &str,
+        theme_colors: &HashMap<String, Color>,
+    ) -> Result<Vec<Vec<(Style, String)>>, Error> {
+        // Pre-calculate all styles to avoid borrowing issues during highlighting
+        let mut style_cache = HashMap::new();
+        for &name in HIGHLIGHT_NAMES {
+            style_cache.insert(name, self.get_themed_style(name, theme_colors));
+        }
+        let default_style = self.get_themed_style("variable", theme_colors);
+        
+        // Get the configuration - we know it exists
+        let config = self.configurations.get(filetype)
+            .ok_or_else(|| Error::Generic(format!("No configuration found for filetype: {}", filetype)))?;
+        
+        let highlights = self.highlighter.highlight(
+            config,
+            code.as_bytes(),
+            None,
+            |_| None // No language injection for now
+        ).map_err(|e| Error::Generic(format!("Tree-sitter highlighting failed: {}", e)))?;
+
+        let mut result = Vec::new();
+        let mut current_line = Vec::new();
+        let mut current_style = default_style.clone();
+        let mut style_stack = Vec::new();
+
+        for event in highlights {
+            match event.map_err(|e| Error::Generic(format!("Highlight event error: {}", e)))? {
+                HighlightEvent::Source { start, end } => {
+                    let text = &code[start..end];
+                    
+                    // Handle line breaks
+                    for line in text.lines() {
+                        current_line.push((current_style.clone(), line.to_string()));
+                        
+                        // Check if we're at the end of a line
+                        if text.contains('\n') {
+                            result.push(current_line);
+                            current_line = Vec::new();
+                        }
+                    }
+                }
+                HighlightEvent::HighlightStart(style_idx) => {
+                    // Push current style to stack
+                    style_stack.push(current_style.clone());
+                    
+                    // Get the highlight name for this style index
+                    if let Some(highlight_name) = HIGHLIGHT_NAMES.get(style_idx.0) {
+                        current_style = style_cache.get(highlight_name)
+                            .cloned()
+                            .unwrap_or_else(|| default_style.clone());
+                    }
+                }
+                HighlightEvent::HighlightEnd => {
+                    // Pop style from stack
+                    if let Some(previous_style) = style_stack.pop() {
+                        current_style = previous_style;
+                    } else {
+                        current_style = default_style.clone();
+                    }
+                }
+            }
+        }
+
+        // Add the last line if there's content
+        if !current_line.is_empty() {
+            result.push(current_line);
+        }
+
+        // Ensure we have at least one line
+        if result.is_empty() {
+            result.push(vec![(default_style, String::new())]);
+        }
+
+        Ok(result)
+    }
+
+    /// Perform actual tree-sitter highlighting using HighlightConfiguration
+    fn treesitter_highlight_with_theme(
+        &mut self,
+        code: &str,
+        config: &HighlightConfiguration,
+        theme_colors: &HashMap<String, Color>,
+    ) -> Result<Vec<Vec<(Style, String)>>, Error> {
+        // Pre-calculate all styles to avoid borrowing issues during highlighting
+        let mut style_cache = HashMap::new();
+        for &name in HIGHLIGHT_NAMES {
+            style_cache.insert(name, self.get_themed_style(name, theme_colors));
+        }
+        let default_style = self.get_themed_style("variable", theme_colors);
+        
+        let highlights = self.highlighter.highlight(
+            config,
+            code.as_bytes(),
+            None,
+            |_| None // No language injection for now
+        ).map_err(|e| Error::Generic(format!("Tree-sitter highlighting failed: {}", e)))?;
+
+        let mut result = Vec::new();
+        let mut current_line = Vec::new();
+        let mut current_style = default_style.clone();
+        let mut style_stack = Vec::new();
+
+        for event in highlights {
+            match event.map_err(|e| Error::Generic(format!("Highlight event error: {}", e)))? {
+                HighlightEvent::Source { start, end } => {
+                    let text = &code[start..end];
+                    
+                    // Handle line breaks
+                    for line in text.lines() {
+                        current_line.push((current_style.clone(), line.to_string()));
+                        
+                        // Check if we're at the end of a line
+                        if text.contains('\n') {
+                            result.push(current_line);
+                            current_line = Vec::new();
+                        }
+                    }
+                }
+                HighlightEvent::HighlightStart(style_idx) => {
+                    // Push current style to stack
+                    style_stack.push(current_style.clone());
+                    
+                    // Get the highlight name for this style index
+                    if let Some(highlight_name) = HIGHLIGHT_NAMES.get(style_idx.0) {
+                        current_style = style_cache.get(highlight_name)
+                            .cloned()
+                            .unwrap_or_else(|| default_style.clone());
+                    }
+                }
+                HighlightEvent::HighlightEnd => {
+                    // Pop style from stack
+                    if let Some(previous_style) = style_stack.pop() {
+                        current_style = previous_style;
+                    } else {
+                        current_style = default_style.clone();
+                    }
+                }
+            }
+        }
+
+        // Add the last line if there's content
+        if !current_line.is_empty() {
+            result.push(current_line);
+        }
+
+        // Ensure we have at least one line
+        if result.is_empty() {
+            result.push(vec![(default_style, String::new())]);
+        }
+
+        Ok(result)
     }
 
     /// Enhanced highlighting using Neovim's current theme colors

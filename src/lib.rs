@@ -13,7 +13,7 @@ use silicon::{
     formatter::{ImageFormatter, ImageFormatterBuilder},
     utils::{Background, ShadowAdder, ToRgba},
 };
-use std::{fs::create_dir_all, path::PathBuf};
+use std::fs::create_dir_all;
 use syntect::{easy::HighlightLines, util::LinesWithEndings, highlighting::Style};
 use time::{format_description, OffsetDateTime};
 use treesitter::TreesitterHighlighter;
@@ -96,7 +96,8 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         )?;
         
         // Use the tree-sitter highlighter for enhanced highlighting
-        let ts_highlighter = TreesitterHighlighter::new();
+        let mut ts_highlighter = TreesitterHighlighter::new()
+            .map_err(|e| Error::Generic(format!("Failed to create tree-sitter highlighter: {}", e)))?;
         let ts_highlights = ts_highlighter.highlight_code(&code, &ft.to_string())?;
         
         if let Ok(ts_colors) = ts_highlighter.get_current_theme_colors() {
