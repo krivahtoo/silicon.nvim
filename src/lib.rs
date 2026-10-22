@@ -1,4 +1,5 @@
 use clipboard::dump_image_to_clipboard;
+use image::RgbaImage;
 use config::{Opts, OutputOpts};
 use error::Error;
 use nvim_oxi::{self as oxi};
@@ -21,13 +22,15 @@ use utils::{parse_str_color, IntoFont, IntoFontStyle};
 mod clipboard;
 mod config;
 mod error;
+mod nvim_highlight;
 mod utils;
 
 fn list_themes() -> Result<Vec<String>, Error> {
     let ha = HighlightingAssets::new();
     let (_, ts) = (ha.syntax_set, ha.theme_set);
 
-    let themes = ts.themes.keys().cloned().collect::<Vec<_>>();
+    let mut themes = ts.themes.keys().cloned().collect::<Vec<_>>();
+    themes.push("nvim".to_owned());
     Ok(themes)
 }
 
@@ -48,47 +51,25 @@ fn rebuild_themes(path: Option<String>) -> Result<(), Error> {
 }
 
 fn save_image(opts: Opts) -> Result<(), Error> {
-    let ha = HighlightingAssets::new();
-    let (ps, ts) = (ha.syntax_set, ha.theme_set);
     if opts.start == 0 && opts.end == 0 {
         return Err(Error::Generic(
             "line1 and line2 are required when calling `capture` directly".to_owned(),
         ));
     }
 
-    let code = utils::get_lines(&opts)?;
-
-    let ft: oxi::String = get_option_value(
-        "filetype",
-        &OptionOptsBuilder::default()
-            .buffer(Buffer::current())
-            .build(),
-    )?;
-
-    let syntax = ps
-        .find_syntax_by_token(&ft.to_string())
-        .ok_or_else(|| Error::Generic("Could not find syntax for filetype.".to_owned()))?;
-
-    let theme = match ts
-        .themes
-        .get(&opts.theme.clone().unwrap_or_else(|| "Dracula".to_owned()))
-    {
-        Some(theme) => theme,
-        _ => {
-            api::err_writeln(&format!(
-                "Could not load '{}' theme.",
-                opts.clone().theme.unwrap_or_default()
-            ));
-            ts.themes
-                .get("Dracula")
-                .ok_or_else(|| Error::Generic("Error loading dracula theme".to_owned()))?
+    let nvim_hl = if opts.theme.as_deref() == Some("nvim") {
+        let hl = nvim_highlight::collect(&opts)?;
+        if hl.is_none() {
+            api::notify(
+                "No tree-sitter parser for this buffer, falling back to syntect.",
+                LogLevel::Warn,
+                &NotifyOpts::default(),
+            )?;
         }
+        hl
+    } else {
+        None
     };
-
-    let mut h = HighlightLines::new(syntax, theme);
-    let highlight = LinesWithEndings::from(&code)
-        .map(|line| h.highlight_line(line, &ps))
-        .collect::<Result<Vec<_>, _>>()?;
 
     let adder = ShadowAdder::default()
         .background(Background::Solid(parse_str_color(
@@ -114,7 +95,13 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         .to_font();
 
     let mut formatter = get_formatter(&fonts, &opts, adder)?;
-    let mut image = formatter.format(&highlight, theme);
+    let mut image = match &nvim_hl {
+        Some(hl) => formatter.format(
+            &nvim_highlight::to_styles(hl)?,
+            &nvim_highlight::to_theme(hl)?,
+        ),
+        None => syntect_image(&opts, &mut formatter)?,
+    };
 
     if let Some(text) = opts.watermark.text {
         let font = FontCollection::new(fonts.as_slice())?;
@@ -165,6 +152,49 @@ fn save_image(opts: Opts) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+fn syntect_image(
+    opts: &Opts,
+    formatter: &mut ImageFormatter<FontCollection>,
+) -> Result<RgbaImage, Error> {
+    let ha = HighlightingAssets::new();
+    let (ps, ts) = (ha.syntax_set, ha.theme_set);
+
+    let code = utils::get_lines(opts)?;
+
+    let ft: oxi::String = get_option_value(
+        "filetype",
+        &OptionOptsBuilder::default()
+            .buffer(Buffer::current())
+            .build(),
+    )?;
+
+    let syntax = ps
+        .find_syntax_by_token(&ft.to_string())
+        .ok_or_else(|| Error::Generic("Could not find syntax for filetype.".to_owned()))?;
+
+    let theme_name = match opts.theme.as_deref() {
+        // "nvim" lands here only as a fallback when tree-sitter is unavailable
+        None | Some("nvim") => "Dracula",
+        Some(name) => name,
+    };
+    let theme = match ts.themes.get(theme_name) {
+        Some(theme) => theme,
+        _ => {
+            api::err_writeln(&format!("Could not load '{theme_name}' theme."));
+            ts.themes
+                .get("Dracula")
+                .ok_or_else(|| Error::Generic("Error loading dracula theme".to_owned()))?
+        }
+    };
+
+    let mut h = HighlightLines::new(syntax, theme);
+    let highlight = LinesWithEndings::from(&code)
+        .map(|line| h.highlight_line(line, &ps))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(formatter.format(&highlight, theme))
 }
 
 fn get_formatter(

@@ -89,6 +89,8 @@ The `setup` function accepts the following table:
       font = 'Hack=20', -- (string) The font and font size to use for the screenshot.
       -- (string) The color theme to use for syntax highlighting.
       -- It can be a theme name or path to a .tmTheme file.
+      -- Use 'nvim' to highlight with tree-sitter and your current colorscheme
+      -- (falls back to syntect when the buffer has no tree-sitter parser).
       theme = 'Dracula',
     
       -- Background and shadow configuration for the screenshot
