@@ -9,3 +9,6 @@ rustflags = [
   "-C", "link-arg=-undefined",
   "-C", "link-arg=dynamic_lookup",
 ]
+# GCC 15+ defaults to C23, which breaks the bundled Oniguruma C sources (onig_sys).
+[env]
+CFLAGS = "-std=gnu17"
