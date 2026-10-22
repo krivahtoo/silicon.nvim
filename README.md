@@ -6,7 +6,7 @@ Render beautiful image of your code in neovim using [silicon](https://github.com
 
 [![Release](https://github.com/krivahtoo/silicon.nvim/actions/workflows/release.yml/badge.svg)](https://github.com/krivahtoo/silicon.nvim/actions/workflows/ci.yml)
 ![License](https://img.shields.io/github/license/krivahtoo/silicon.nvim)
-![Neovim version](https://img.shields.io/badge/Neovim-0.10-57A143?logo=neovim)
+![Neovim version](https://img.shields.io/badge/Neovim-0.11-57A143?logo=neovim)
 
 </div>
 
@@ -20,7 +20,7 @@ https://github.com/krivahtoo/silicon.nvim/assets/41364823/d67912b0-190e-4990-bf7
 
 ### Requirements
 
-- nvim `v0.10`
+- nvim `v0.11`
 - **[Optional]** cargo and rust toolchain
 
 #### Packer
@@ -91,6 +91,8 @@ The `setup` function accepts the following table:
   font = 'Hack=20', -- (string) The font and font size to use for the screenshot.
   -- (string) The color theme to use for syntax highlighting.
   -- It can be a theme name or path to a .tmTheme file.
+  -- Use 'nvim' to highlight with tree-sitter and your current colorscheme
+  -- (falls back to syntect when the buffer has no tree-sitter parser).
   theme = 'Dracula',
 
   -- Background and shadow configuration for the screenshot

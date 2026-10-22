@@ -27,6 +27,8 @@ jobs:
         with:
           neovim: true
           version: stable
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libfontconfig1-dev
 
       - name: build
         run: cargo build && mv target/debug/libsilicon.so lua/silicon.so

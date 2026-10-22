@@ -4,7 +4,10 @@ use std::{
 };
 
 use image::RgbaImage;
-use nvim_oxi::api::{self, opts::NotifyOpts, types::LogLevel};
+use nvim_oxi::{
+    api::{self, types::LogLevel},
+    Dictionary,
+};
 
 fn send_to_clipboard(image: &RgbaImage) {
     #[cfg(target_os = "linux")]
@@ -17,13 +20,13 @@ fn send_to_clipboard(image: &RgbaImage) {
             api::notify(
                 "Clipboard not supported",
                 LogLevel::Error,
-                &NotifyOpts::default(),
+                &Dictionary::new(),
             )
             .unwrap();
             return;
         }
         _ => {
-            api::notify("Failed to copy", LogLevel::Warn, &NotifyOpts::default()).unwrap();
+            api::notify("Failed to copy", LogLevel::Warn, &Dictionary::new()).unwrap();
             return;
         }
     };
@@ -40,7 +43,7 @@ fn send_to_clipboard(image: &RgbaImage) {
     api::notify(
         "Image saved to clipboard",
         LogLevel::Info,
-        &NotifyOpts::default(),
+        &Dictionary::new(),
     )
     .unwrap();
 
@@ -48,7 +51,7 @@ fn send_to_clipboard(image: &RgbaImage) {
         api::notify(
             &format!("Failed to copy to clipboard: {e}"),
             LogLevel::Error,
-            &NotifyOpts::default(),
+            &Dictionary::new(),
         )
         .unwrap();
     };
