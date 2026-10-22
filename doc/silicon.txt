@@ -13,7 +13,7 @@ INSTALLATION                                            *silicon-installation*
 
 REQUIREMENTS ~
 
-- nvim `v0.10`
+- nvim `v0.11`
 - **[Optional]** cargo and rust toolchain
 
 

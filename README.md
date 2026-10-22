@@ -6,7 +6,7 @@ Render beautiful image of your code in neovim using [silicon](https://github.com
 
 [![Release](https://github.com/krivahtoo/silicon.nvim/actions/workflows/release.yml/badge.svg)](https://github.com/krivahtoo/silicon.nvim/actions/workflows/ci.yml)
 ![License](https://img.shields.io/github/license/krivahtoo/silicon.nvim)
-![Neovim version](https://img.shields.io/badge/Neovim-0.10-57A143?logo=neovim)
+![Neovim version](https://img.shields.io/badge/Neovim-0.11-57A143?logo=neovim)
 
 </div>
 
@@ -20,7 +20,7 @@ https://github.com/krivahtoo/silicon.nvim/assets/41364823/d67912b0-190e-4990-bf7
 
 ### Requirements
 
-- nvim `v0.10`
+- nvim `v0.11`
 - **[Optional]** cargo and rust toolchain
 
 #### Packer
