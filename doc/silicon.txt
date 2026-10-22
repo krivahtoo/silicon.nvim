@@ -1,4 +1,5 @@
-*silicon.txt*             For NVIM v0.8.0             Last change: 2024 May 25
+*silicon.txt*
+                               For NVIM v0.8.0    Last change: 2026 October 22
 
 ==============================================================================
 Table of Contents                                  *silicon-table-of-contents*
@@ -84,7 +85,7 @@ The `setup` function accepts the following table:
         -- https://time-rs.github.io/book/api/format-description.html#components
         format = "silicon_[year][month][day]_[hour][minute][second].png",
       },
-    
+
       -- Font and theme configuration for the screenshot.
       font = 'Hack=20', -- (string) The font and font size to use for the screenshot.
       -- (string) The color theme to use for syntax highlighting.
@@ -92,7 +93,7 @@ The `setup` function accepts the following table:
       -- Use 'nvim' to highlight with tree-sitter and your current colorscheme
       -- (falls back to syntect when the buffer has no tree-sitter parser).
       theme = 'Dracula',
-    
+
       -- Background and shadow configuration for the screenshot
       background = '#eff', -- (string) The background color for the screenshot.
       shadow = {
@@ -101,7 +102,7 @@ The `setup` function accepts the following table:
         offset_y = 0, -- (number) The vertical offset for the shadow.
         color = '#555' -- (string) The color for the shadow.
       },
-    
+
       pad_horiz = 100, -- (number) The horizontal padding.
       pad_vert = 80, -- (number) The vertical padding.
       line_number = false, -- (boolean) Whether to show line numbers in the screenshot.
@@ -113,7 +114,7 @@ The `setup` function accepts the following table:
       round_corner = true,
       window_controls = true, -- (boolean) Whether to show window controls (minimize, maximize, close) in the screenshot.
       window_title = nil, -- (function) A function that returns the window title as a string.
-    
+
       -- Watermark configuration for the screenshot
       watermark = {
         text = nil, -- (string) The text to use as the watermark, set to nil to disable.
