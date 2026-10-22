@@ -63,7 +63,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
             api::notify(
                 "No tree-sitter parser for this buffer, falling back to syntect.",
                 LogLevel::Warn,
-                &NotifyOpts::default(),
+                &Dictionary::new(),
             )?;
         }
         hl
@@ -132,7 +132,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         api::notify(
             &format!("Image saved to {}", output.to_str().unwrap_or_default()),
             LogLevel::Info,
-            &NotifyOpts::default(),
+            &Dictionary::new(),
         )?;
     } else if opts.output.clipboard.unwrap_or_default() {
         dump_image_to_clipboard(image);
@@ -147,7 +147,7 @@ fn save_image(opts: Opts) -> Result<(), Error> {
         api::notify(
             &format!("Image saved to {file}"),
             LogLevel::Info,
-            &NotifyOpts::default(),
+            &Dictionary::new(),
         )?;
     }
 
