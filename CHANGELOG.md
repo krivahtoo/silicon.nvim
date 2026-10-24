@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/krivahtoo/silicon.nvim/compare/v0.6.0...v0.6.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* Added necessary dependencies before building ([#60](https://github.com/krivahtoo/silicon.nvim/issues/60)) ([f6391f6](https://github.com/krivahtoo/silicon.nvim/commit/f6391f608840a4cba5765c464d3c30fa5da61ca0))
+
 ## [0.6.0](https://github.com/krivahtoo/silicon.nvim/compare/v0.5.2...v0.6.0) (2026-10-22)
 
 
