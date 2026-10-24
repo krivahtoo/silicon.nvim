@@ -30,6 +30,9 @@ jobs:
           default: true
           override: true
 
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libfontconfig1-dev
+
       - name: build
         run: cargo build --all --release && strip target/release/libsilicon.so && mv target/release/libsilicon.so lua/silicon.so
 
