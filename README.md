@@ -14,6 +14,9 @@ Render beautiful image of your code in neovim using [silicon](https://github.com
 
 https://github.com/krivahtoo/silicon.nvim/assets/41364823/d67912b0-190e-4990-bf79-039e79f8b4ad
 
+<img width="1394" height="854" alt="silicon_20261022_133414" src="https://github.com/user-attachments/assets/0ef0b00f-5652-4b30-868c-b835fa47f355" />
+
+
 <!-- panvimdoc-ignore-end -->
 
 ## Installation
