@@ -2,7 +2,8 @@
 
 # silicon.nvim
 
-Render beautiful image of your code in neovim using [silicon](https://github.com/Aloxaf/silicon).
+Render beautiful image of your code in neovim using [silicon](https://github.com/Aloxaf/silicon),
+highlighted either with a syntect theme or with Neovim's tree-sitter and your current colorscheme.
 
 [![Release](https://github.com/krivahtoo/silicon.nvim/actions/workflows/release.yml/badge.svg)](https://github.com/krivahtoo/silicon.nvim/actions/workflows/ci.yml)
 ![License](https://img.shields.io/github/license/krivahtoo/silicon.nvim)
@@ -25,6 +26,7 @@ https://github.com/krivahtoo/silicon.nvim/assets/41364823/d67912b0-190e-4990-bf7
 
 - nvim `v0.11`
 - **[Optional]** cargo and rust toolchain
+- **[Optional]** a tree-sitter parser for the filetype, when using `theme = 'nvim'`
 
 #### Packer
 
@@ -129,6 +131,31 @@ The `setup` function accepts the following table:
   },
 }
 ```
+
+### Tree-sitter highlighting
+
+Set `theme = 'nvim'` to render the image with the same highlighting you see in
+the editor:
+
+```lua
+require('silicon').setup({
+  theme = 'nvim',
+})
+```
+
+With this theme:
+
+- Highlights come from the buffer's tree-sitter parser, including injected
+  languages (e.g. code blocks in markdown).
+- Captures are resolved against your current colorscheme the way Neovim does
+  (`@function.call.lua` → `@function.call` → `@function`), including bold,
+  italic and underline.
+- The code background and default text color come from the `Normal`
+  highlight group.
+- If the buffer has no tree-sitter parser, a warning is shown and the image is
+  rendered with syntect instead.
+
+`nvim` is also included in `require('silicon').list_themes()`.
 
 ### Example
 
