@@ -1,5 +1,5 @@
 *silicon.txt*
-                              For NVIM v0.8.0    Last change: 2026 November 02
+                              For NVIM v0.8.0    Last change: 2026 November 11
 
 ==============================================================================
 Table of Contents                                  *silicon-table-of-contents*
@@ -16,6 +16,7 @@ REQUIREMENTS ~
 
 - nvim `v0.11`
 - **[Optional]** cargo and rust toolchain
+- **[Optional]** a tree-sitter parser for the filetype, when using `theme = 'nvim'`
 
 
 PACKER
@@ -125,6 +126,32 @@ The `setup` function accepts the following table:
       },
     }
 <
+
+
+TREE-SITTER HIGHLIGHTING ~
+
+Set `theme = 'nvim'` to render the image with the same highlighting you see in
+the editor:
+
+>lua
+    require('silicon').setup({
+      theme = 'nvim',
+    })
+<
+
+With this theme:
+
+- Highlights come from the buffer’s tree-sitter parser, including injected
+    languages (e.g. code blocks in markdown).
+- Captures are resolved against your current colorscheme the way Neovim does
+    (`@function.call.lua` → `@function.call` → `@function`), including bold,
+    italic and underline.
+- The code background and default text color come from the `Normal`
+    highlight group.
+- If the buffer has no tree-sitter parser, a warning is shown and the image is
+    rendered with syntect instead.
+
+`nvim` is also included in `require('silicon').list_themes()`.
 
 
 EXAMPLE ~
